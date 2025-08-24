@@ -1,0 +1,21 @@
+{
+  "project_name": "california-family-motions",
+  "platform": "GCP",
+  "region": "us-central1",
+  "architecture": "SERVERLESS",
+  "services": {
+    "compute": "Cloud Run",
+    "sql_db": "Cloud SQL (Postgres)",
+    "vector_db": "Vertex AI Matching Engine",
+    "messaging": "Pub/Sub",
+    "ai_agent": "Vertex AI"
+  },
+  "environments": ["dev", "prod"],
+  "non_functional": {
+    "consistency": "transactional (Postgres)",
+    "secrets": "Secret Manager",
+    "auth": "Google Identity Platform (JWT; Cloud Run authZ)",
+    "pdf": "Async render via Pub/Sub worker",
+    "logging": "Cloud Logging + Error Reporting"
+  }
+}

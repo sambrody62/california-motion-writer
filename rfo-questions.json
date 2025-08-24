@@ -1,0 +1,225 @@
+{
+  "rfo_intake_flow": {
+    "steps": [
+      {
+        "step": 1,
+        "section": "case_basics",
+        "title": "Case Information",
+        "questions": [
+          {
+            "id": "has_existing_case",
+            "text": "Do you have an existing family law case?",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "id": "case_number",
+            "text": "What is your case number?",
+            "type": "text",
+            "condition": "has_existing_case == true",
+            "validation": "pattern:^[A-Z0-9-]+$",
+            "placeholder": "e.g., FL-2024-001234"
+          },
+          {
+            "id": "county",
+            "text": "Which California county is your case in?",
+            "type": "select",
+            "options": ["Los Angeles", "San Francisco", "Orange", "San Diego", "Alameda", "Santa Clara", "Other"],
+            "required": true
+          },
+          {
+            "id": "party_role",
+            "text": "Are you the Petitioner or Respondent?",
+            "type": "radio",
+            "options": ["Petitioner", "Respondent"],
+            "required": true
+          }
+        ]
+      },
+      {
+        "step": 2,
+        "section": "relief_type",
+        "title": "What Are You Requesting?",
+        "questions": [
+          {
+            "id": "relief_categories",
+            "text": "What orders are you requesting? (Check all that apply)",
+            "type": "checkbox_group",
+            "options": [
+              {"value": "custody", "label": "Child Custody"},
+              {"value": "visitation", "label": "Visitation/Parenting Time"},
+              {"value": "child_support", "label": "Child Support"},
+              {"value": "spousal_support", "label": "Spousal Support"},
+              {"value": "attorney_fees", "label": "Attorney Fees"},
+              {"value": "property", "label": "Property Division"},
+              {"value": "restraining", "label": "Restraining Orders"},
+              {"value": "other", "label": "Other"}
+            ],
+            "required": true,
+            "min_selections": 1
+          },
+          {
+            "id": "emergency_orders",
+            "text": "Are you requesting emergency (ex parte) orders?",
+            "type": "boolean",
+            "help": "Emergency orders are for immediate danger or irreparable harm"
+          }
+        ]
+      },
+      {
+        "step": 3,
+        "section": "custody_details",
+        "title": "Child Custody Details",
+        "condition": "relief_categories.includes('custody')",
+        "questions": [
+          {
+            "id": "current_custody",
+            "text": "What is the current custody arrangement?",
+            "type": "textarea",
+            "placeholder": "Describe who the children live with and when"
+          },
+          {
+            "id": "requested_legal_custody",
+            "text": "What legal custody arrangement are you requesting?",
+            "type": "radio",
+            "options": [
+              {"value": "joint", "label": "Joint legal custody"},
+              {"value": "sole_me", "label": "Sole legal custody to me"},
+              {"value": "sole_other", "label": "Sole legal custody to other parent"}
+            ]
+          },
+          {
+            "id": "requested_physical_custody",
+            "text": "What physical custody arrangement are you requesting?",
+            "type": "radio",
+            "options": [
+              {"value": "primary_me", "label": "Primary physical custody to me"},
+              {"value": "primary_other", "label": "Primary physical custody to other parent"},
+              {"value": "joint_equal", "label": "Joint physical custody (50/50)"},
+              {"value": "joint_unequal", "label": "Joint physical custody (not 50/50)"}
+            ]
+          },
+          {
+            "id": "visitation_schedule",
+            "text": "Describe the specific visitation schedule you're requesting:",
+            "type": "textarea",
+            "placeholder": "e.g., Every other weekend from Friday 6pm to Sunday 6pm, alternating holidays..."
+          }
+        ]
+      },
+      {
+        "step": 4,
+        "section": "support_details",
+        "title": "Support Details",
+        "condition": "relief_categories.includes('child_support') || relief_categories.includes('spousal_support')",
+        "questions": [
+          {
+            "id": "child_support_amount",
+            "text": "What monthly child support amount are you requesting?",
+            "type": "number",
+            "condition": "relief_categories.includes('child_support')",
+            "prefix": "$"
+          },
+          {
+            "id": "child_support_reason",
+            "text": "Why should child support be ordered or changed?",
+            "type": "textarea",
+            "condition": "relief_categories.includes('child_support')",
+            "placeholder": "Explain changes in income, expenses, or custody time"
+          },
+          {
+            "id": "spousal_support_amount",
+            "text": "What monthly spousal support amount are you requesting?",
+            "type": "number",
+            "condition": "relief_categories.includes('spousal_support')",
+            "prefix": "$"
+          },
+          {
+            "id": "spousal_support_duration",
+            "text": "For how long should spousal support be paid?",
+            "type": "text",
+            "condition": "relief_categories.includes('spousal_support')",
+            "placeholder": "e.g., 5 years, permanently, until remarriage"
+          }
+        ]
+      },
+      {
+        "step": 5,
+        "section": "facts_circumstances",
+        "title": "Facts and Circumstances",
+        "questions": [
+          {
+            "id": "background_facts",
+            "text": "Briefly describe the background of your case:",
+            "type": "textarea",
+            "max_length": 1000,
+            "placeholder": "When did you separate? What orders are currently in place?"
+          },
+          {
+            "id": "changed_circumstances",
+            "text": "What has changed that requires new orders?",
+            "type": "textarea",
+            "max_length": 1500,
+            "help": "Courts need to know what's different now",
+            "placeholder": "Describe any changes in jobs, living situations, children's needs, etc."
+          },
+          {
+            "id": "best_interest_factors",
+            "text": "How are your requests in the children's best interest?",
+            "type": "textarea",
+            "condition": "relief_categories.includes('custody') || relief_categories.includes('visitation')",
+            "max_length": 1500,
+            "placeholder": "Consider their health, safety, welfare, stability, and relationships"
+          },
+          {
+            "id": "urgency_explanation",
+            "text": "Why do you need the court to act now?",
+            "type": "textarea",
+            "max_length": 1000,
+            "placeholder": "Explain any time-sensitive issues"
+          }
+        ]
+      },
+      {
+        "step": 6,
+        "section": "other_requests",
+        "title": "Additional Information",
+        "questions": [
+          {
+            "id": "other_orders",
+            "text": "Any other orders you're requesting?",
+            "type": "textarea",
+            "condition": "relief_categories.includes('other')",
+            "placeholder": "Describe any additional relief needed"
+          },
+          {
+            "id": "attorney_fees_basis",
+            "text": "Why should the other party pay your attorney fees?",
+            "type": "textarea",
+            "condition": "relief_categories.includes('attorney_fees')",
+            "placeholder": "Explain financial disparity or bad faith conduct"
+          },
+          {
+            "id": "proposed_hearing_dates",
+            "text": "Are there any dates you CANNOT attend court in the next 60 days?",
+            "type": "textarea",
+            "placeholder": "List any dates you're unavailable"
+          }
+        ]
+      }
+    ],
+    "validation_rules": {
+      "required_attachments": {
+        "child_support": ["FL-150 Income and Expense Declaration"],
+        "spousal_support": ["FL-150 Income and Expense Declaration"],
+        "custody": ["FL-311 Child Custody and Visitation Application Attachment"],
+        "property": ["FL-160 Property Declaration"]
+      },
+      "character_limits": {
+        "declaration_text": 5000,
+        "facts_section": 3000,
+        "relief_description": 1000
+      }
+    }
+  }
+}

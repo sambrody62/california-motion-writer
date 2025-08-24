@@ -1,0 +1,148 @@
+{
+  "templates": {
+    "RFO": {
+      "form_number": "FL-300",
+      "title": "Request for Order",
+      "sections": {
+        "header": {
+          "case_caption": {
+            "petitioner_name": "string",
+            "respondent_name": "string",
+            "case_number": "string"
+          },
+          "court_info": {
+            "county": "string",
+            "court_address": "string",
+            "branch_name": "string"
+          }
+        },
+        "relief_requested": {
+          "child_custody": {
+            "modify_custody": "boolean",
+            "legal_custody_to": "enum:petitioner,respondent,joint",
+            "physical_custody_to": "enum:petitioner,respondent,joint",
+            "visitation_schedule": "text"
+          },
+          "child_support": {
+            "modify_support": "boolean",
+            "amount_requested": "number",
+            "reasons": "text"
+          },
+          "spousal_support": {
+            "modify_spousal": "boolean",
+            "amount_requested": "number",
+            "duration": "string"
+          },
+          "attorney_fees": {
+            "request_fees": "boolean",
+            "amount": "number",
+            "basis": "text"
+          },
+          "other_relief": {
+            "description": "text"
+          }
+        },
+        "facts": {
+          "background": "text",
+          "current_situation": "text",
+          "changed_circumstances": "text",
+          "urgency": "text"
+        },
+        "best_interest_factors": {
+          "health_safety_welfare": "text",
+          "stability_continuity": "text",
+          "child_preference": "text",
+          "parental_fitness": "text"
+        },
+        "attachments": {
+          "income_expense_declaration": "boolean",
+          "custody_visitation_application": "boolean",
+          "property_declaration": "boolean",
+          "points_authorities": "boolean"
+        },
+        "declaration": {
+          "statement_of_facts": "text",
+          "under_penalty_of_perjury": "boolean",
+          "date": "date",
+          "signature": "string"
+        }
+      }
+    },
+    "RESPONSE": {
+      "form_number": "FL-320",
+      "title": "Responsive Declaration to Request for Order",
+      "sections": {
+        "header": {
+          "case_caption": {
+            "petitioner_name": "string",
+            "respondent_name": "string",
+            "case_number": "string"
+          },
+          "court_info": {
+            "county": "string",
+            "court_address": "string",
+            "branch_name": "string"
+          },
+          "hearing_info": {
+            "hearing_date": "date",
+            "hearing_time": "time",
+            "department": "string"
+          }
+        },
+        "response_to_requests": {
+          "consent": {
+            "items_agreed": "array",
+            "items_disputed": "array"
+          },
+          "counter_proposals": {
+            "custody_counter": "text",
+            "support_counter": "text",
+            "other_counter": "text"
+          }
+        },
+        "response_facts": {
+          "disputed_facts": "text",
+          "corrections": "text",
+          "additional_facts": "text",
+          "evidence_references": "text"
+        },
+        "legal_arguments": {
+          "applicable_law": "text",
+          "case_citations": "array",
+          "why_request_should_be_denied": "text"
+        },
+        "counter_request": {
+          "request_different_orders": "boolean",
+          "orders_requested": "text",
+          "factual_basis": "text",
+          "legal_basis": "text"
+        },
+        "declaration": {
+          "response_statement": "text",
+          "under_penalty_of_perjury": "boolean",
+          "date": "date",
+          "signature": "string"
+        }
+      }
+    }
+  },
+  "common_fields": {
+    "party_info": {
+      "name": "string",
+      "address": "string",
+      "phone": "string",
+      "email": "string",
+      "attorney_info": {
+        "name": "string",
+        "bar_number": "string",
+        "firm": "string",
+        "address": "string"
+      }
+    },
+    "children": {
+      "child_name": "string",
+      "date_of_birth": "date",
+      "current_residence": "enum:petitioner,respondent,other"
+    }
+  }
+}

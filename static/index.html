@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Motion Writer - MVP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+        }
+        
+        .tagline {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        h2 {
+            color: #0066cc;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #0052a3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4caf50;
+            transition: width 0.3s;
+        }
+        
+        .question-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox-item input {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .step-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .step-indicator {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0066cc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>California Motion Writer</h1>
+        <p class="tagline">Generate professional family court motions with guided assistance</p>
+        
+        <!-- Login Section -->
+        <div id="loginSection" class="section">
+            <h2>Sign In</h2>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Password">
+            </div>
+            <button onclick="login()">Sign In</button>
+            <p style="margin-top: 15px; color: #666;">Demo credentials: demo@example.com / demo123</p>
+        </div>
+        
+        <!-- Motion Type Selection -->
+        <div id="motionTypeSection" class="section hidden">
+            <h2>Select Motion Type</h2>
+            <div class="form-group">
+                <label>What type of motion do you need?</label>
+                <select id="motionType">
+                    <option value="">Select...</option>
+                    <option value="RFO">Request for Order (FL-300)</option>
+                    <option value="RESPONSE">Response to Request for Order (FL-320)</option>
+                </select>
+            </div>
+            <button onclick="createMotion()">Start Motion</button>
+        </div>
+        
+        <!-- Intake Questions -->
+        <div id="intakeSection" class="section hidden">
+            <h2 id="stepTitle">Loading...</h2>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            
+            <div class="step-indicator" id="stepIndicator">Step 1 of 6</div>
+            
+            <div id="questionsContainer" class="loading">
+                <div class="spinner"></div>
+            </div>
+            
+            <div class="step-navigation">
+                <button id="prevButton" onclick="previousStep()" disabled>Previous</button>
+                <button id="nextButton" onclick="nextStep()">Next</button>
+            </div>
+        </div>
+        
+        <!-- Review Section -->
+        <div id="reviewSection" class="section hidden">
+            <h2>Review Your Motion</h2>
+            <div id="reviewContent"></div>
+            <button onclick="processWithLLM()">Process with AI</button>
+            <button onclick="generatePDF()">Generate PDF</button>
+        </div>
+        
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message hidden"></div>
+    </div>
+    
+    <script>
+        let authToken = null;
+        let currentMotionId = null;
+        let currentStep = 1;
+        let allAnswers = {};
+        let currentQuestions = [];
+        
+        // Demo login
+        async function login() {
+            const email = document.getElementById('email').value || 'demo@example.com';
+            const password = document.getElementById('password').value || 'demo123';
+            
+            try {
+                // For demo, we'll use a mock token
+                // In production, this would call the actual auth endpoint
+                authToken = 'demo-token-' + Date.now();
+                
+                showStatus('Logged in successfully!', 'success');
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('motionTypeSection').classList.remove('hidden');
+            } catch (error) {
+                showStatus('Login failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Create new motion
+        async function createMotion() {
+            const motionType = document.getElementById('motionType').value;
+            if (!motionType) {
+                showStatus('Please select a motion type', 'error');
+                return;
+            }
+            
+            try {
+                // Mock API call
+                const response = await mockApiCall('/api/v1/motions', {
+                    method: 'POST',
+                    body: JSON.stringify({ motion_type: motionType })
+                });
+                
+                currentMotionId = response.id || 'mock-motion-' + Date.now();
+                
+                document.getElementById('motionTypeSection').classList.add('hidden');
+                document.getElementById('intakeSection').classList.remove('hidden');
+                
+                // Start intake flow
+                startIntake();
+            } catch (error) {
+                showStatus('Failed to create motion: ' + error.message, 'error');
+            }
+        }
+        
+        // Start intake questionnaire
+        async function startIntake() {
+            try {
+                // Load first step
+                await loadStep(1);
+            } catch (error) {
+                showStatus('Failed to load questions: ' + error.message, 'error');
+            }
+        }
+        
+        // Load a specific step
+        async function loadStep(stepNumber) {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                // Mock loading questions for the step
+                const stepData = getMockQuestions(stepNumber);
+                
+                document.getElementById('stepTitle').textContent = stepData.title;
+                document.getElementById('stepIndicator').textContent = `Step ${stepNumber} of 6`;
+                document.getElementById('progressBar').style.width = `${(stepNumber / 6) * 100}%`;
+                
+                currentQuestions = stepData.questions;
+                renderQuestions(stepData.questions);
+                
+                // Update navigation buttons
+                document.getElementById('prevButton').disabled = stepNumber === 1;
+                document.getElementById('nextButton').textContent = stepNumber === 6 ? 'Finish' : 'Next';
+                
+            } catch (error) {
+                showStatus('Failed to load step: ' + error.message, 'error');
+            }
+        }
+        
+        // Render questions in the container
+        function renderQuestions(questions) {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            
+            questions.forEach(question => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                
+                const label = document.createElement('label');
+                label.textContent = question.text;
+                label.htmlFor = question.id;
+                card.appendChild(label);
+                
+                if (question.help) {
+                    const help = document.createElement('p');
+                    help.style.fontSize = '12px';
+                    help.style.color = '#666';
+                    help.style.marginTop = '5px';
+                    help.textContent = question.help;
+                    card.appendChild(help);
+                }
+                
+                // Create appropriate input based on type
+                if (question.type === 'boolean') {
+                    const select = document.createElement('select');
+                    select.id = question.id;
+                    select.innerHTML = '<option value="">Select...</option><option value="true">Yes</option><option value="false">No</option>';
+                    select.value = allAnswers[question.id] || '';
+                    card.appendChild(select);
+                } else if (question.type === 'textarea') {
+                    const textarea = document.createElement('textarea');
+                    textarea.id = question.id;
+                    textarea.placeholder = question.placeholder || '';
+                    textarea.value = allAnswers[question.id] || '';
+                    card.appendChild(textarea);
+                } else if (question.type === 'select') {
+                    const select = document.createElement('select');
+                    select.id = question.id;
+                    select.innerHTML = '<option value="">Select...</option>';
+                    question.options.forEach(opt => {
+                        select.innerHTML += `<option value="${opt}">${opt}</option>`;
+                    });
+                    select.value = allAnswers[question.id] || '';
+                    card.appendChild(select);
+                } else if (question.type === 'checkbox_group') {
+                    const group = document.createElement('div');
+                    group.className = 'checkbox-group';
+                    question.options.forEach(opt => {
+                        const item = document.createElement('div');
+                        item.className = 'checkbox-item';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.id = question.id + '_' + opt.value;
+                        checkbox.value = opt.value;
+                        checkbox.checked = (allAnswers[question.id] || []).includes(opt.value);
+                        
+                        const label = document.createElement('label');
+                        label.htmlFor = checkbox.id;
+                        label.textContent = opt.label;
+                        
+                        item.appendChild(checkbox);
+                        item.appendChild(label);
+                        group.appendChild(item);
+                    });
+                    card.appendChild(group);
+                } else {
+                    const input = document.createElement('input');
+                    input.type = question.type || 'text';
+                    input.id = question.id;
+                    input.placeholder = question.placeholder || '';
+                    input.value = allAnswers[question.id] || '';
+                    card.appendChild(input);
+                }
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // Collect answers from current step
+        function collectAnswers() {
+            currentQuestions.forEach(question => {
+                if (question.type === 'checkbox_group') {
+                    const checkboxes = document.querySelectorAll(`[id^="${question.id}_"]:checked`);
+                    allAnswers[question.id] = Array.from(checkboxes).map(cb => cb.value);
+                } else {
+                    const element = document.getElementById(question.id);
+                    if (element) {
+                        allAnswers[question.id] = element.value;
+                    }
+                }
+            });
+        }
+        
+        // Navigate to next step
+        async function nextStep() {
+            collectAnswers();
+            
+            if (currentStep === 6) {
+                // Show review section
+                showReview();
+            } else {
+                currentStep++;
+                await loadStep(currentStep);
+            }
+        }
+        
+        // Navigate to previous step
+        async function previousStep() {
+            collectAnswers();
+            
+            if (currentStep > 1) {
+                currentStep--;
+                await loadStep(currentStep);
+            }
+        }
+        
+        // Show review section
+        function showReview() {
+            document.getElementById('intakeSection').classList.add('hidden');
+            document.getElementById('reviewSection').classList.remove('hidden');
+            
+            const content = document.getElementById('reviewContent');
+            content.innerHTML = '<h3>Your Answers:</h3>';
+            
+            Object.entries(allAnswers).forEach(([key, value]) => {
+                if (value && value !== '') {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '10px';
+                    div.innerHTML = `<strong>${key.replace(/_/g, ' ').toUpperCase()}:</strong> ${
+                        Array.isArray(value) ? value.join(', ') : value
+                    }`;
+                    content.appendChild(div);
+                }
+            });
+        }
+        
+        // Process motion with LLM
+        async function processWithLLM() {
+            showStatus('Processing with AI...', 'info');
+            
+            try {
+                // Mock API call
+                await mockApiCall('/api/v1/llm/process-motion', {
+                    method: 'POST',
+                    body: JSON.stringify({ motion_id: currentMotionId })
+                });
+                
+                showStatus('Motion processed successfully!', 'success');
+            } catch (error) {
+                showStatus('Failed to process motion: ' + error.message, 'error');
+            }
+        }
+        
+        // Generate PDF
+        async function generatePDF() {
+            showStatus('Generating PDF...', 'info');
+            
+            try {
+                // Mock API call
+                const response = await mockApiCall('/api/v1/documents/generate-pdf-sync', {
+                    method: 'POST',
+                    body: JSON.stringify({ motion_id: currentMotionId })
+                });
+                
+                showStatus('PDF generated! Download will start shortly...', 'success');
+                
+                // Mock download
+                setTimeout(() => {
+                    alert('PDF would download here in production');
+                }, 1000);
+                
+            } catch (error) {
+                showStatus('Failed to generate PDF: ' + error.message, 'error');
+            }
+        }
+        
+        // Show status message
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type}`;
+            statusEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // Mock API call (replace with real fetch in production)
+        async function mockApiCall(url, options) {
+            console.log('Mock API call:', url, options);
+            
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Return mock response
+            return { success: true, id: 'mock-id-' + Date.now() };
+        }
+        
+        // Get mock questions for a step
+        function getMockQuestions(stepNumber) {
+            const steps = {
+                1: {
+                    title: 'Case Information',
+                    questions: [
+                        { id: 'has_existing_case', text: 'Do you have an existing family law case?', type: 'boolean', required: true },
+                        { id: 'case_number', text: 'What is your case number?', type: 'text', placeholder: 'e.g., FL-2024-001234' },
+                        { id: 'county', text: 'Which California county is your case in?', type: 'select', 
+                          options: ['Los Angeles', 'San Francisco', 'Orange', 'San Diego', 'Alameda', 'Santa Clara'], required: true }
+                    ]
+                },
+                2: {
+                    title: 'What Are You Requesting?',
+                    questions: [
+                        { id: 'relief_categories', text: 'What orders are you requesting? (Check all that apply)', 
+                          type: 'checkbox_group', 
+                          options: [
+                            {value: 'custody', label: 'Child Custody'},
+                            {value: 'visitation', label: 'Visitation/Parenting Time'},
+                            {value: 'child_support', label: 'Child Support'},
+                            {value: 'spousal_support', label: 'Spousal Support'}
+                          ], required: true }
+                    ]
+                },
+                3: {
+                    title: 'Child Custody Details',
+                    questions: [
+                        { id: 'current_custody', text: 'What is the current custody arrangement?', type: 'textarea',
+                          placeholder: 'Describe who the children live with and when' }
+                    ]
+                },
+                4: {
+                    title: 'Support Details',
+                    questions: [
+                        { id: 'child_support_amount', text: 'What monthly child support amount are you requesting?', 
+                          type: 'number', placeholder: 'Enter amount in dollars' }
+                    ]
+                },
+                5: {
+                    title: 'Facts and Circumstances',
+                    questions: [
+                        { id: 'background_facts', text: 'Briefly describe the background of your case:', 
+                          type: 'textarea', placeholder: 'When did you separate? What orders are currently in place?' },
+                        { id: 'changed_circumstances', text: 'What has changed that requires new orders?', 
+                          type: 'textarea', placeholder: 'Describe any changes in jobs, living situations, children\'s needs, etc.' }
+                    ]
+                },
+                6: {
+                    title: 'Additional Information',
+                    questions: [
+                        { id: 'urgency_explanation', text: 'Why do you need the court to act now?', 
+                          type: 'textarea', placeholder: 'Explain any time-sensitive issues' }
+                    ]
+                }
+            };
+            
+            return steps[stepNumber] || steps[1];
+        }
+    </script>
+</body>
+</html>

@@ -4,8 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
+env/
 ENV/
 build/
 develop-eggs/
@@ -24,18 +24,16 @@ wheels/
 *.egg
 
 # Testing
-.pytest_cache/
 .coverage
+.pytest_cache/
 htmlcov/
-.tox/
-.hypothesis/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+*.swn
 .DS_Store
 
 # Git
@@ -45,27 +43,26 @@ htmlcov/
 # Documentation
 *.md
 docs/
-README.md
-LICENSE
 
-# Environment
+# Frontend (will be deployed separately)
+frontend/
+node_modules/
+
+# Local files
 .env
-.env.*
+.env.local
+test.db
+*.db
+*.sqlite
+*.sqlite3
 
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
+# Scripts
+*.sh
+PRE-FLIGHT.sh
+bootstrap_mvp.sh
+run_local.sh
+deploy.sh
 
-# GCP
-.gcloudignore
-app.yaml
-
-# Temporary files
-*.log
-*.tmp
-temp/
-tmp/
-
-# Forms directory (will be mounted separately)
-forms/*.pdf
+# Development files
+start_dev.py
+run_dev.py

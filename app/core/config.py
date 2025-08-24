@@ -3,9 +3,8 @@ Application configuration
 """
 import os
 from typing import List
-from pydantic import BaseSettings
 
-class Settings(BaseSettings):
+class Settings:
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
@@ -26,11 +25,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "https://motion-api-mlcaanldqq-uc.a.run.app"
-    ]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080", "http://localhost:8000"]
     
     # Pub/Sub
     PUBSUB_TOPIC: str = os.getenv("PUBSUB_TOPIC", "app-events")
@@ -45,8 +40,5 @@ class Settings(BaseSettings):
     # Vector Search
     INDEX_ID: str = "8771272646722584576"
     INDEX_ENDPOINT_ID: str = "1505347966657888256"
-    
-    class Config:
-        case_sensitive = True
 
 settings = Settings()

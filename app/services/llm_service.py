@@ -4,32 +4,55 @@ LLM Service for motion rewriting using Vertex AI
 import os
 import json
 from typing import Dict, Any, Optional, List
-from google.cloud import aiplatform
-from google.cloud.aiplatform import initializer
-from vertexai.generative_models import GenerativeModel, GenerationConfig, SafetySetting, HarmCategory, HarmBlockThreshold
-import vertexai
+try:
+    from google.cloud import aiplatform
+    from google.cloud.aiplatform import initializer
+    from vertexai.generative_models import GenerativeModel, GenerationConfig, SafetySetting, HarmCategory, HarmBlockThreshold
+    import vertexai
+    HAS_VERTEX_AI = True
+except ImportError:
+    HAS_VERTEX_AI = False
+    # Mock classes for development
+    class GenerationConfig:
+        def __init__(self, **kwargs): pass
+    class SafetySetting:
+        def __init__(self, **kwargs): pass
+    class HarmCategory:
+        HARM_CATEGORY_HATE_SPEECH = "hate"
+        HARM_CATEGORY_DANGEROUS_CONTENT = "danger"
+        HARM_CATEGORY_SEXUALLY_EXPLICIT = "explicit"
+        HARM_CATEGORY_HARASSMENT = "harassment"
+    class HarmBlockThreshold:
+        BLOCK_ONLY_HIGH = "high"
 from pathlib import Path
 
 from app.core.config import settings
 
 class LLMService:
     def __init__(self):
-        # Initialize Vertex AI
-        vertexai.init(
-            project=settings.PROJECT_ID,
-            location=settings.VERTEX_AI_LOCATION
-        )
-        
         # Load prompts
         prompts_path = Path(__file__).parent.parent.parent / "llm-prompts.md"
         with open(prompts_path, 'r') as f:
             self.prompts_content = f.read()
         
-        # Initialize model
-        self.model = GenerativeModel(
-            model_name=settings.VERTEX_AI_MODEL,
-            system_instruction=self._get_system_prompt()
-        )
+        # Initialize Vertex AI only if available and not in development
+        if HAS_VERTEX_AI and settings.ENVIRONMENT != "development":
+            try:
+                vertexai.init(
+                    project=settings.PROJECT_ID,
+                    location=settings.VERTEX_AI_LOCATION
+                )
+                # Initialize model
+                self.model = GenerativeModel(
+                    model_name=settings.VERTEX_AI_MODEL,
+                    system_instruction=self._get_system_prompt()
+                )
+            except Exception as e:
+                print(f"Warning: Could not initialize Vertex AI: {e}")
+                self.model = None
+        else:
+            print("Running in development mode - using mock LLM")
+            self.model = None
         
         # Generation config
         self.generation_config = GenerationConfig(
@@ -204,14 +227,29 @@ Format each factor as separate paragraph with supporting facts."""
             prompt = self._build_rfo_prompt(section_name, user_input, context)
             
             # Generate content
-            response = self.model.generate_content(
-                prompt,
-                generation_config=self.generation_config,
-                safety_settings=self.safety_settings
-            )
-            
-            # Extract text
-            rewritten_text = response.text if response.text else ""
+            if self.model:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=self.generation_config,
+                    safety_settings=self.safety_settings
+                )
+                # Extract text
+                rewritten_text = response.text if response.text else ""
+            else:
+                # Mock response for development
+                rewritten_text = f"""MOTION FOR REQUEST FOR ORDER
+
+The {context.get('party_role', 'Petitioner')} respectfully requests the Court issue the following orders:
+
+FACTS AND CIRCUMSTANCES:
+{user_input}
+
+The requested orders are in the best interests of the children and necessary for the following reasons:
+1. The circumstances have materially changed since the last order.
+2. The current arrangement is no longer serving the children's needs.
+3. Immediate court intervention is required to protect the welfare of the minor children.
+
+[This is a mock response for development testing. In production, this would be professionally rewritten by AI.]"""
             
             # Count tokens (approximate)
             tokens_used = len(prompt.split()) + len(rewritten_text.split())

@@ -11,12 +11,15 @@ import logging
 import uuid
 import io
 from datetime import datetime
-from google.cloud import pubsub_v1
 import json
+try:
+    from google.cloud import pubsub_v1
+    HAS_PUBSUB = True
+except ImportError:
+    HAS_PUBSUB = False
 
 from app.models.user import User
-from app.models.motion import Motion, MotionDraft
-from app.models.document import Document
+from app.models.motion import Motion, MotionDraft, Document
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
@@ -108,6 +111,10 @@ async def generate_pdf_background(
 ):
     """Background task to generate PDF"""
     try:
+        if not HAS_PUBSUB:
+            logger.info(f"Pub/Sub not available - skipping message publish")
+            return
+            
         # Publish to Pub/Sub for processing
         publisher = pubsub_v1.PublisherClient()
         topic_path = publisher.topic_path(settings.PROJECT_ID, settings.PUBSUB_TOPIC)

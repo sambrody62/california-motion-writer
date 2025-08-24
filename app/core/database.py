@@ -5,8 +5,13 @@ import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from google.cloud import secretmanager
 from app.core.config import settings
+
+try:
+    from google.cloud import secretmanager
+    HAS_GCP = True
+except ImportError:
+    HAS_GCP = False
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,9 @@ class Database:
     
     async def get_db_password(self) -> str:
         """Retrieve database password from Secret Manager"""
+        if not HAS_GCP:
+            return "SecurePassword123!"
+        
         try:
             client = secretmanager.SecretManagerServiceClient()
             name = f"projects/{settings.PROJECT_ID}/secrets/{settings.DB_PASSWORD_SECRET}/versions/latest"
@@ -31,16 +39,20 @@ class Database:
     
     async def init(self):
         """Initialize database connection"""
-        password = await self.get_db_password()
         
         # Build connection string
-        if settings.ENVIRONMENT == "production":
+        if settings.ENVIRONMENT == "development":
+            # Use SQLite for local development
+            DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+        elif settings.ENVIRONMENT == "production":
+            password = await self.get_db_password()
             # Use Cloud SQL connector for production
             DATABASE_URL = (
                 f"postgresql+asyncpg://{settings.DB_USER}:{password}@/"
                 f"{settings.DB_NAME}?host={settings.DB_HOST}"
             )
         else:
+            password = await self.get_db_password()
             # Direct connection for development
             DATABASE_URL = (
                 f"postgresql+asyncpg://{settings.DB_USER}:{password}@"

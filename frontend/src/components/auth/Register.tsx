@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../../contexts/AuthContext';
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
 import { UserPlusIcon } from '@heroicons/react/20/solid';
 
 interface RegisterFormData {
@@ -12,17 +12,21 @@ interface RegisterFormData {
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser } = useFirebaseAuth();
   const [error, setError] = useState('');
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>();
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setError('');
-      await registerUser(data.email, data.password);
-      navigate('/profile/setup');
+      const result = await registerUser(data.email, data.password);
+      if (result.success) {
+        navigate('/profile/setup');
+      } else {
+        setError(result.error || 'Failed to create account');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create account');
+      setError(err.message || 'Failed to create account');
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motionAPI } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import { PlusIcon, DocumentTextIcon, ClockIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
 
@@ -20,7 +20,7 @@ interface Motion {
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout } = useFirebaseAuth();
   const [motions, setMotions] = useState<Motion[]>([]);
   const [loading, setLoading] = useState(true);
 

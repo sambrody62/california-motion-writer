@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { FirebaseAuthProvider } from './contexts/FirebaseAuthContext';
 import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
 import { Dashboard } from './components/Dashboard';
@@ -11,7 +11,7 @@ import { PrivateRoute } from './components/PrivateRoute';
 
 function App() {
   return (
-    <AuthProvider>
+    <FirebaseAuthProvider>
       <Router>
         <Routes>
           {/* Public routes */}
@@ -72,7 +72,7 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
-    </AuthProvider>
+    </FirebaseAuthProvider>
   );
 }
 

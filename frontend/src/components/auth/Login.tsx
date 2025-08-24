@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../../contexts/AuthContext';
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
 import { LockClosedIcon } from '@heroicons/react/20/solid';
 
 interface LoginFormData {
@@ -11,17 +11,21 @@ interface LoginFormData {
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login } = useFirebaseAuth();
   const [error, setError] = useState('');
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>();
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       setError('');
-      await login(data.email, data.password);
-      navigate('/dashboard');
+      const result = await login(data.email, data.password);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Failed to login');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to login');
+      setError(err.message || 'Failed to login');
     }
   };
 

@@ -15,8 +15,7 @@ from google.cloud import pubsub_v1
 import json
 
 from app.models.user import User
-from app.models.motion import Motion, MotionDraft
-from app.models.document import Document
+from app.models.motion import Motion, MotionDraft, Document
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db

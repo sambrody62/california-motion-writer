@@ -22,8 +22,12 @@ class LLMService:
         
         # Load prompts
         prompts_path = Path(__file__).parent.parent.parent / "llm-prompts.md"
-        with open(prompts_path, 'r') as f:
-            self.prompts_content = f.read()
+        try:
+            with open(prompts_path, 'r') as f:
+                self.prompts_content = f.read()
+        except FileNotFoundError:
+            print(f"Warning: {prompts_path} not found, using default prompts")
+            self.prompts_content = ""
         
         # Initialize model
         self.model = GenerativeModel(

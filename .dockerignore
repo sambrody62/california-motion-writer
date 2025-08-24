@@ -40,8 +40,11 @@ htmlcov/
 .git/
 .gitignore
 
-# Documentation
-*.md
+# Documentation (but keep necessary files)
+README.md
+CONTRIBUTING.md
+TODO_MVP.md
+CLAUDE.md
 docs/
 
 # Frontend (will be deployed separately)

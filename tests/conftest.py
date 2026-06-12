@@ -5,7 +5,6 @@ import os
 import sys
 import pytest
 import pytest_asyncio
-import asyncio
 from typing import AsyncGenerator
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
@@ -29,13 +28,6 @@ from app.models.motion import Motion
 from app.models.chat import ChatSession, ChatMessage
 
 from app.api.v1.endpoints.auth import get_password_hash
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest_asyncio.fixture(scope="function")
 async def test_db():
@@ -96,7 +88,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
     # Create client
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(transport=transport, base_url="http://test", follow_redirects=True) as ac:
         yield ac
 
     # Clean up

@@ -3,24 +3,44 @@ Motion and Draft models
 """
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, JSON, Text, Integer, Date, Time
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, JSON, Text, Integer, Date, Time, Enum
+from app.core.uuid_type import UUID
 from sqlalchemy.orm import relationship
 import uuid
+import enum
 
 from app.core.database import Base
 
+class MotionType(enum.Enum):
+    """Types of motions that can be filed"""
+    RFO = "RFO"  # Request for Order
+    RESPONSE = "RESPONSE"  # Response to RFO
+    FL_300 = "FL-300"  # Request for Order form
+    FL_320 = "FL-320"  # Response to Request for Order form
+    VIOLATION = "VIOLATION"  # Violation filing
+    EX_PARTE = "EX_PARTE"  # Emergency ex parte
+    CONTEMPT = "CONTEMPT"  # Contempt proceedings
+    MODIFICATION = "MODIFICATION"  # Modification of existing order
+
 class Motion(Base):
     __tablename__ = "motions"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    profile_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id"))
-    
+
+    id = Column(UUID(), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(UUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    profile_id = Column(UUID(), ForeignKey("profiles.id"))
+
     # Motion Details
-    motion_type = Column(String(50), nullable=False)  # 'RFO', 'RESPONSE'
+    motion_type = Column(Enum(MotionType), nullable=False)
     status = Column(String(50), nullable=False, default="draft")  # draft, completed, filed
     case_caption = Column(Text)
+    title = Column(String(255))  # Brief title/description
+    description = Column(Text)  # Detailed description
+
+    # Violation-specific fields
+    filing_track = Column(String(50))  # 'emergency', 'regular', 'contempt'
+    courthouse = Column(String(100))  # Which courthouse to file at
+    intake_data = Column(JSON)  # Store complete intake responses
+    generated_text = Column(Text)  # Generated declaration or other text
     
     # Filing Info
     filing_date = Column(Date)
@@ -39,9 +59,9 @@ class Motion(Base):
 
 class MotionDraft(Base):
     __tablename__ = "motion_drafts"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    motion_id = Column(UUID(as_uuid=True), ForeignKey("motions.id", ondelete="CASCADE"), nullable=False)
+
+    id = Column(UUID(), primary_key=True, default=lambda: str(uuid.uuid4()))
+    motion_id = Column(UUID(), ForeignKey("motions.id", ondelete="CASCADE"), nullable=False)
     
     # Q&A Data
     step_number = Column(Integer, nullable=False)
@@ -64,9 +84,9 @@ class MotionDraft(Base):
 
 class Document(Base):
     __tablename__ = "documents"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    motion_id = Column(UUID(as_uuid=True), ForeignKey("motions.id", ondelete="CASCADE"), nullable=False)
+
+    id = Column(UUID(), primary_key=True, default=lambda: str(uuid.uuid4()))
+    motion_id = Column(UUID(), ForeignKey("motions.id", ondelete="CASCADE"), nullable=False)
     
     # Document Info
     document_type = Column(String(50), nullable=False)  # 'FL-300', 'FL-320'

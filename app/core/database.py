@@ -1,11 +1,20 @@
 """
 Database configuration and connection management
 """
+import os
 import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from google.cloud import secretmanager
+
+# Conditionally import GCP services
+USE_GCP = os.getenv("USE_GCP", "true").lower() == "true"
+if USE_GCP:
+    try:
+        from google.cloud import secretmanager
+    except ImportError:
+        USE_GCP = False
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -19,6 +28,10 @@ class Database:
     
     async def get_db_password(self) -> str:
         """Retrieve database password from Secret Manager"""
+        # For local development with SQLite, return dummy password
+        if settings.ENVIRONMENT == "development" and not USE_GCP:
+            return "local-dev-password"
+
         try:
             client = secretmanager.SecretManagerServiceClient()
             name = f"projects/{settings.PROJECT_ID}/secrets/{settings.DB_PASSWORD_SECRET}/versions/latest"
@@ -26,26 +39,42 @@ class Database:
             return response.payload.data.decode("UTF-8")
         except Exception as e:
             logger.error(f"Failed to retrieve database password: {e}")
-            # Fallback for local development
-            return "SecurePassword123!"
+
+            # Only allow fallback in development with explicit env variable
+            if settings.ENVIRONMENT == "development":
+                import os
+                local_password = os.getenv("LOCAL_DB_PASSWORD", "local-dev-password")
+                logger.warning("Using LOCAL_DB_PASSWORD for development")
+                return local_password
+            else:
+                # Never fallback in production - fail fast
+                raise Exception(
+                    f"Cannot retrieve database password from Secret Manager: {e}"
+                )
     
     async def init(self):
         """Initialize database connection"""
-        password = await self.get_db_password()
-        
-        # Build connection string
-        if settings.ENVIRONMENT == "production":
-            # Use Cloud SQL connector for production
-            DATABASE_URL = (
-                f"postgresql+asyncpg://{settings.DB_USER}:{password}@/"
-                f"{settings.DB_NAME}?host={settings.DB_HOST}"
-            )
+        # For local development with SQLite
+        # Check for explicit local database flag or development without GCP for database
+        use_local_db = os.getenv("USE_LOCAL_DATABASE", "false").lower() == "true"
+        if settings.ENVIRONMENT == "development" and (use_local_db or not USE_GCP):
+            DATABASE_URL = "sqlite+aiosqlite:///./local.db"
         else:
-            # Direct connection for development
-            DATABASE_URL = (
-                f"postgresql+asyncpg://{settings.DB_USER}:{password}@"
-                f"localhost:5432/{settings.DB_NAME}"
-            )
+            password = await self.get_db_password()
+
+            # Build connection string
+            if settings.ENVIRONMENT == "production":
+                # Use Cloud SQL connector for production
+                DATABASE_URL = (
+                    f"postgresql+asyncpg://{settings.DB_USER}:{password}@/"
+                    f"{settings.DB_NAME}?host={settings.DB_HOST}"
+                )
+            else:
+                # Direct connection for development
+                DATABASE_URL = (
+                    f"postgresql+asyncpg://{settings.DB_USER}:{password}@"
+                    f"localhost:5432/{settings.DB_NAME}"
+                )
         
         # Create async engine
         self.engine = create_async_engine(

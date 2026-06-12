@@ -132,10 +132,13 @@ class PDFService:
     def _get_fl150_fields(self) -> Dict[str, Dict]:
         """Field mappings for FL-150 Income and Expense Declaration"""
         return {
+            # Case caption (same positions as FL-300 header)
+            "petitioner_name": {"page": 0, "x": 100, "y": 500, "type": "text"},
+            "respondent_name": {"page": 0, "x": 100, "y": 480, "type": "text"},
+            "case_number": {"page": 0, "x": 400, "y": 500, "type": "text"},
             # Income fields
             "employer_name": {"page": 0, "x": 100, "y": 600, "type": "text"},
             "gross_monthly_income": {"page": 0, "x": 100, "y": 550, "type": "text"},
-            # ... additional FL-150 specific fields
         }
     
     async def fill_form(

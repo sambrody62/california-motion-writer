@@ -1,0 +1,331 @@
+{
+  "violationFiling": {
+    "name": "San Diego Family Court Violation Filing",
+    "description": "Forms required for filing a violation of court order in San Diego County",
+    "county": "San Diego",
+    "courthouses": [
+      {
+        "name": "Central Division",
+        "address": "1100 Union St., San Diego, CA 92101"
+      },
+      {
+        "name": "East County Division",
+        "address": "250 E. Main St., El Cajon, CA 92020"
+      },
+      {
+        "name": "North County Division",
+        "address": "325 S. Melrose Dr., Vista, CA 92081"
+      },
+      {
+        "name": "South County Division",
+        "address": "500 3rd Ave., Chula Vista, CA 91910"
+      }
+    ],
+    "tracks": [
+      {
+        "id": "emergency",
+        "name": "Emergency (Ex Parte)",
+        "description": "For immediate relief due to urgent violations",
+        "timeline": "24-48 hours",
+        "requiredForms": ["D-046", "FL-300", "MC-030"],
+        "optionalForms": ["FL-150"]
+      },
+      {
+        "id": "regular",
+        "name": "Regular Motion",
+        "description": "Standard violation filing with normal timeline",
+        "timeline": "3-6 weeks",
+        "requiredForms": ["FL-300", "MC-030"],
+        "optionalForms": ["FL-150", "FL-305"]
+      },
+      {
+        "id": "contempt",
+        "name": "Contempt Proceedings",
+        "description": "For serious, willful violations with potential criminal consequences",
+        "timeline": "4-8 weeks",
+        "requiredForms": ["FL-410", "FL-411", "MC-030"],
+        "optionalForms": ["FL-150"]
+      }
+    ],
+    "forms": [
+      {
+        "id": "D-046",
+        "fileName": "d046.pdf",
+        "name": "Ex Parte Application and Order",
+        "description": "Request emergency orders from the court",
+        "mandatory": false,
+        "track": ["emergency"],
+        "fields": {
+          "petitionerInfo": {
+            "name": "string",
+            "address": "string",
+            "phone": "string",
+            "email": "string",
+            "attorneyFor": "string",
+            "barNumber": "string"
+          },
+          "respondentInfo": {
+            "name": "string"
+          },
+          "caseInfo": {
+            "caseNumber": "string",
+            "department": "string",
+            "hearingDate": "date",
+            "hearingTime": "time"
+          },
+          "reliefRequested": {
+            "temporaryRestrainingOrder": "boolean",
+            "custodyVisitation": "boolean",
+            "orderShorteningTime": "boolean",
+            "other": "string"
+          },
+          "urgencyReason": "text",
+          "notice": {
+            "wasGiven": "boolean",
+            "date": "date",
+            "time": "time",
+            "opposingAttorney": "string"
+          }
+        }
+      },
+      {
+        "id": "FL-300",
+        "fileName": "fl300.pdf",
+        "name": "Request for Order",
+        "description": "Primary form for requesting court orders",
+        "mandatory": true,
+        "track": ["emergency", "regular"],
+        "fields": {
+          "requestType": {
+            "childCustody": "boolean",
+            "childSupport": "boolean",
+            "spousalSupport": "boolean",
+            "attorneyFees": "boolean",
+            "property": "boolean"
+          },
+          "childCustodyOrders": {
+            "legalCustody": "string",
+            "physicalCustody": "string",
+            "visitationSchedule": "text"
+          },
+          "supportRequests": {
+            "childSupportAmount": "number",
+            "spousalSupportAmount": "number",
+            "startDate": "date"
+          }
+        }
+      },
+      {
+        "id": "FL-305",
+        "fileName": "fl305.pdf",
+        "name": "Temporary Orders",
+        "description": "Request temporary orders while case is pending",
+        "mandatory": false,
+        "track": ["regular"],
+        "fields": {
+          "temporaryOrders": {
+            "custody": "boolean",
+            "support": "boolean",
+            "property": "boolean",
+            "restrainingOrder": "boolean"
+          }
+        }
+      },
+      {
+        "id": "FL-335",
+        "fileName": "fl335.pdf",
+        "name": "Continuance of Hearing",
+        "description": "Request to postpone a scheduled hearing",
+        "mandatory": false,
+        "track": ["emergency", "regular", "contempt"],
+        "fields": {
+          "currentHearing": {
+            "date": "date",
+            "time": "time",
+            "department": "string"
+          },
+          "continuanceReason": "text",
+          "proposedNewDate": "date"
+        }
+      },
+      {
+        "id": "FL-410",
+        "fileName": "fl410.pdf",
+        "name": "Order to Show Cause and Affidavit for Contempt",
+        "description": "Initiate contempt proceedings for willful violation",
+        "mandatory": true,
+        "track": ["contempt"],
+        "fields": {
+          "violatedOrder": {
+            "orderDate": "date",
+            "orderType": "string",
+            "specificProvisions": "text"
+          },
+          "violationDetails": {
+            "dates": "array<date>",
+            "description": "text",
+            "evidence": "text"
+          },
+          "requestedSanctions": {
+            "jailTime": "boolean",
+            "communityService": "boolean",
+            "fines": "number",
+            "attorneyFees": "number"
+          }
+        }
+      },
+      {
+        "id": "FL-411",
+        "fileName": "fl411 .pdf",
+        "name": "Order to Show Cause (Contempt)",
+        "description": "Court's order for contempt hearing",
+        "mandatory": true,
+        "track": ["contempt"],
+        "fields": {
+          "hearingInfo": {
+            "date": "date",
+            "time": "time",
+            "department": "string",
+            "courthouse": "string"
+          },
+          "allegations": "text",
+          "consequences": "text"
+        }
+      },
+      {
+        "id": "FL-150",
+        "fileName": "fl150.pdf",
+        "name": "Income and Expense Declaration",
+        "description": "Financial disclosure for support calculations",
+        "mandatory": false,
+        "track": ["emergency", "regular", "contempt"],
+        "fields": {
+          "employment": {
+            "employer": "string",
+            "occupation": "string",
+            "monthlyIncome": "number",
+            "payFrequency": "string"
+          },
+          "otherIncome": {
+            "rental": "number",
+            "dividends": "number",
+            "other": "number"
+          },
+          "expenses": {
+            "housing": "number",
+            "food": "number",
+            "utilities": "number",
+            "transportation": "number",
+            "healthcare": "number",
+            "childcare": "number",
+            "other": "object"
+          },
+          "assets": "array<object>",
+          "debts": "array<object>"
+        }
+      },
+      {
+        "id": "MC-030",
+        "fileName": "mc030.pdf",
+        "name": "Declaration",
+        "description": "Written statement of facts under penalty of perjury",
+        "mandatory": true,
+        "track": ["emergency", "regular", "contempt"],
+        "fields": {
+          "declarantInfo": {
+            "name": "string",
+            "relationship": "string"
+          },
+          "facts": "text",
+          "exhibits": "array<string>",
+          "signature": {
+            "date": "date",
+            "location": "string"
+          }
+        }
+      }
+    ],
+    "intakeQuestions": {
+      "violationType": {
+        "question": "What type of court order was violated?",
+        "type": "select",
+        "options": [
+          "Custody/Visitation",
+          "Child Support",
+          "Spousal Support",
+          "Property Division",
+          "Restraining Order",
+          "Other Court Order"
+        ],
+        "required": true
+      },
+      "urgency": {
+        "question": "Is this an emergency requiring immediate court action?",
+        "type": "boolean",
+        "required": true,
+        "followUp": {
+          "if": true,
+          "question": "Explain why immediate action is necessary",
+          "type": "textarea"
+        }
+      },
+      "violationDates": {
+        "question": "When did the violation(s) occur?",
+        "type": "dateList",
+        "required": true
+      },
+      "violationDescription": {
+        "question": "Describe what happened in detail",
+        "type": "textarea",
+        "required": true,
+        "minLength": 100
+      },
+      "evidence": {
+        "question": "What evidence do you have of the violation?",
+        "type": "multiSelect",
+        "options": [
+          "Text messages",
+          "Emails",
+          "Photos/Videos",
+          "Witness statements",
+          "Police reports",
+          "Financial records",
+          "Other documents"
+        ]
+      },
+      "attemptedResolution": {
+        "question": "Have you attempted to resolve this without court intervention?",
+        "type": "boolean",
+        "followUp": {
+          "if": true,
+          "question": "Describe your attempts to resolve the issue",
+          "type": "textarea"
+        }
+      },
+      "priorViolations": {
+        "question": "Have there been prior violations by this party?",
+        "type": "boolean",
+        "followUp": {
+          "if": true,
+          "question": "Describe prior violations and any court actions taken",
+          "type": "textarea"
+        }
+      },
+      "requestedRelief": {
+        "question": "What do you want the court to do?",
+        "type": "multiSelect",
+        "options": [
+          "Modify custody/visitation",
+          "Enforce support payments",
+          "Find party in contempt",
+          "Order makeup visitation",
+          "Award attorney fees",
+          "Issue sanctions/fines",
+          "Modify existing orders",
+          "Other relief"
+        ],
+        "required": true
+      }
+    }
+  }
+}

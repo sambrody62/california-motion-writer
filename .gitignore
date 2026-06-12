@@ -46,12 +46,22 @@ coverage.xml
 # Environments
 .env
 .env.*
+!.env.example
+!.env.template
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Frontend environment files (SECURITY: Never commit these)
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.staging
+frontend/.env.development
+!frontend/.env.example
 
 # Database
 *.db
@@ -73,12 +83,26 @@ Thumbs.db
 .gcloudignore
 service-account-key.json
 *.key.json
+gcp-key.json
+gcp-credentials.json
+
+# Firebase (SECURITY: Never commit service accounts)
+firebase-admin-key.json
+firebase-service-account.json
+firebase-service-account-*.json
+firebase-adminsdk-*.json
+*firebase-key*.json
+!firebase.json
+!firebase-hosting-config.json
+.firebaserc
 
 # Secrets
 secrets/
 *.pem
 *.key
 *.cert
+*.p12
+*.pfx
 
 # Temporary files
 tmp/

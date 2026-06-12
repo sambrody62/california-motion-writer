@@ -4,22 +4,31 @@ LLM Service for motion rewriting using Vertex AI
 import os
 import json
 from typing import Dict, Any, Optional, List
-from google.cloud import aiplatform
-from google.cloud.aiplatform import initializer
-from vertexai.generative_models import GenerativeModel, GenerationConfig, SafetySetting, HarmCategory, HarmBlockThreshold
-import vertexai
 from pathlib import Path
 
+# Conditionally import GCP services
+USE_GCP = os.getenv("USE_GCP", "true").lower() == "true"
+USE_MOCK_LLM = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+
+if USE_GCP and not USE_MOCK_LLM:
+    try:
+        from google.cloud import aiplatform
+        from google.cloud.aiplatform import initializer
+        from vertexai.generative_models import GenerativeModel, GenerationConfig, SafetySetting, HarmCategory, HarmBlockThreshold
+        import vertexai
+    except ImportError:
+        USE_MOCK_LLM = True
+        print("Warning: Vertex AI not available, using mock LLM for local development")
+
 from app.core.config import settings
+from app.middleware.rate_limiter import get_token_limit
+from app.services.cost_monitoring_service import track_llm_cost, check_budget
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LLMService:
     def __init__(self):
-        # Initialize Vertex AI
-        vertexai.init(
-            project=settings.PROJECT_ID,
-            location=settings.VERTEX_AI_LOCATION
-        )
-        
         # Load prompts
         prompts_path = Path(__file__).parent.parent.parent / "llm-prompts.md"
         try:
@@ -28,39 +37,75 @@ class LLMService:
         except FileNotFoundError:
             print(f"Warning: {prompts_path} not found, using default prompts")
             self.prompts_content = ""
-        
-        # Initialize model
-        self.model = GenerativeModel(
-            model_name=settings.VERTEX_AI_MODEL,
-            system_instruction=self._get_system_prompt()
-        )
-        
-        # Generation config
-        self.generation_config = GenerationConfig(
-            temperature=0.7,
-            top_p=0.95,
-            max_output_tokens=8192,
-        )
-        
-        # Safety settings - Allow legal content
-        self.safety_settings = [
-            SafetySetting(
-                category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
-            ),
-            SafetySetting(
-                category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
-            ),
-            SafetySetting(
-                category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
-            ),
-            SafetySetting(
-                category=HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
+
+        if USE_MOCK_LLM:
+            print("Using mock LLM for local development")
+            self.model = None
+            self.generation_config = None
+            self.safety_settings = None
+        else:
+            # Initialize Vertex AI
+            vertexai.init(
+                project=settings.PROJECT_ID,
+                location=settings.VERTEX_AI_LOCATION
             )
-        ]
+
+            # Initialize model
+            self.model = GenerativeModel(
+                model_name=settings.VERTEX_AI_MODEL,
+                system_instruction=self._get_system_prompt()
+            )
+
+            # Generation config with smart limits
+            self.generation_config = GenerationConfig(
+                temperature=0.7,
+                top_p=0.95,
+                max_output_tokens=6000,  # Reduced from 8192 for cost control
+            )
+
+            # Dynamic configs for different operations
+            self.operation_configs = {
+                "chat_response": GenerationConfig(
+                    temperature=0.8,
+                    top_p=0.95,
+                    max_output_tokens=1024
+                ),
+                "section_rewrite": GenerationConfig(
+                    temperature=0.7,
+                    top_p=0.95,
+                    max_output_tokens=3000
+                ),
+                "declaration": GenerationConfig(
+                    temperature=0.7,
+                    top_p=0.95,
+                    max_output_tokens=4000
+                ),
+                "complete_motion": GenerationConfig(
+                    temperature=0.7,
+                    top_p=0.95,
+                    max_output_tokens=6000
+                )
+            }
+
+            # Safety settings - Allow legal content
+            self.safety_settings = [
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
+                ),
+                SafetySetting(
+                    category=HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH
+                )
+            ]
     
     def _get_system_prompt(self) -> str:
         """Extract system prompt from prompts file"""
@@ -197,36 +242,91 @@ Format each factor as separate paragraph with supporting facts."""
         self,
         section_name: str,
         user_answers: Dict[str, Any],
-        context: Dict[str, Any]
+        context: Dict[str, Any],
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Rewrite an RFO section using LLM"""
+        """Rewrite an RFO section using LLM with cost controls"""
         try:
+            # Check emergency shutdown
+            if os.getenv("EMERGENCY_SHUTDOWN", "false").lower() == "true":
+                return {
+                    "success": False,
+                    "error": "Service temporarily unavailable due to budget limits",
+                    "rewritten_text": "",
+                    "tokens_used": 0
+                }
+
             # Combine user answers into narrative
             user_input = self._format_answers_to_narrative(user_answers)
-            
+
             # Build prompt
             prompt = self._build_rfo_prompt(section_name, user_input, context)
-            
-            # Generate content
-            response = self.model.generate_content(
-                prompt,
-                generation_config=self.generation_config,
-                safety_settings=self.safety_settings
+
+            # Estimate tokens and check budget
+            estimated_tokens = len(prompt.split()) * 2  # Conservative estimate
+            budget_ok, budget_msg = await check_budget(
+                estimated_tokens,
+                "section_rewrite",
+                user_id
             )
-            
-            # Extract text
-            rewritten_text = response.text if response.text else ""
-            
-            # Count tokens (approximate)
-            tokens_used = len(prompt.split()) + len(rewritten_text.split())
-            
+
+            if not budget_ok:
+                logger.warning(f"Budget limit reached: {budget_msg}")
+                return {
+                    "success": False,
+                    "error": budget_msg,
+                    "rewritten_text": "",
+                    "tokens_used": 0
+                }
+
+            # Get appropriate token limit
+            token_limit = get_token_limit("section_rewrite")
+
+            if USE_MOCK_LLM:
+                # Mock response for local development
+                rewritten_text = f"""MOCK LLM RESPONSE for {section_name}:
+
+Based on the provided information:
+{user_input[:500]}...
+
+This is a mock response for local development. In production, this would be a professionally rewritten section appropriate for California family court.
+
+[Mock generated content for {section_name}]"""
+                tokens_used = len(prompt.split()) + len(rewritten_text.split())
+            else:
+                # Use operation-specific config
+                config = self.operation_configs.get(
+                    "section_rewrite",
+                    self.generation_config
+                )
+
+                # Generate content using Vertex AI
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=config,
+                    safety_settings=self.safety_settings
+                )
+
+                # Extract text
+                rewritten_text = response.text if response.text else ""
+
+                # Count tokens (approximate)
+                tokens_used = len(prompt.split()) + len(rewritten_text.split())
+
+                # Track usage for cost monitoring
+                await track_llm_cost(
+                    operation="section_rewrite",
+                    tokens=tokens_used,
+                    user_id=user_id
+                )
+
             return {
                 "success": True,
                 "rewritten_text": rewritten_text,
                 "tokens_used": tokens_used,
-                "model": settings.VERTEX_AI_MODEL
+                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
             }
-            
+
         except Exception as e:
             return {
                 "success": False,
@@ -238,28 +338,82 @@ Format each factor as separate paragraph with supporting facts."""
     async def rewrite_declaration(
         self,
         narrative: str,
-        declarant_name: str
+        declarant_name: str,
+        user_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Rewrite narrative as formal declaration"""
+        """Rewrite narrative as formal declaration with cost controls"""
         try:
+            # Check emergency shutdown
+            if os.getenv("EMERGENCY_SHUTDOWN", "false").lower() == "true":
+                return {
+                    "success": False,
+                    "error": "Service temporarily unavailable due to budget limits",
+                    "rewritten_text": "",
+                    "tokens_used": 0
+                }
+
             prompt = self._build_declaration_prompt(narrative, declarant_name)
-            
-            response = self.model.generate_content(
-                prompt,
-                generation_config=self.generation_config,
-                safety_settings=self.safety_settings
+
+            # Check budget
+            estimated_tokens = len(prompt.split()) * 2
+            budget_ok, budget_msg = await check_budget(
+                estimated_tokens,
+                "declaration",
+                user_id
             )
-            
-            rewritten_text = response.text if response.text else ""
-            tokens_used = len(prompt.split()) + len(rewritten_text.split())
-            
+
+            if not budget_ok:
+                return {
+                    "success": False,
+                    "error": budget_msg,
+                    "rewritten_text": "",
+                    "tokens_used": 0
+                }
+
+            if USE_MOCK_LLM:
+                rewritten_text = f"""MOCK DECLARATION:
+
+I, {declarant_name}, declare as follows:
+
+1. This is a mock declaration for local development.
+2. The narrative provided was: {narrative[:200]}...
+3. In production, this would be a properly formatted legal declaration.
+
+I declare under penalty of perjury under the laws of the State of California that the foregoing is true and correct. Executed on [date] at [city], California.
+
+[Mock Signature]
+{declarant_name}"""
+                tokens_used = len(prompt.split()) + len(rewritten_text.split())
+            else:
+                # Use declaration-specific config
+                config = self.operation_configs.get(
+                    "declaration",
+                    self.generation_config
+                )
+
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=config,
+                    safety_settings=self.safety_settings
+                )
+
+                rewritten_text = response.text if response.text else ""
+                tokens_used = len(prompt.split()) + len(rewritten_text.split())
+
+                # Track usage
+                await track_llm_cost(
+                    operation="declaration",
+                    tokens=tokens_used,
+                    user_id=user_id
+                )
+
             return {
                 "success": True,
                 "rewritten_text": rewritten_text,
                 "tokens_used": tokens_used,
-                "model": settings.VERTEX_AI_MODEL
+                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
             }
-            
+
         except Exception as e:
             return {
                 "success": False,
@@ -276,23 +430,46 @@ Format each factor as separate paragraph with supporting facts."""
         """Enhance custody request with best interests factors"""
         try:
             prompt = self._build_best_interests_prompt(custody_request, children_info)
-            
-            response = self.model.generate_content(
-                prompt,
-                generation_config=self.generation_config,
-                safety_settings=self.safety_settings
-            )
-            
-            enhanced_text = response.text if response.text else ""
-            tokens_used = len(prompt.split()) + len(enhanced_text.split())
-            
+
+            if USE_MOCK_LLM:
+                enhanced_text = f"""MOCK ENHANCED CUSTODY REQUEST:
+
+Original request: {custody_request[:200]}...
+
+Best Interests Factors (Mock):
+
+1. Health, Safety, and Welfare of Children
+   - Children's information: {json.dumps(children_info[:2]) if children_info else 'No children info'}...
+   - This is a mock enhancement for local development.
+
+2. Stability and Continuity
+   - In production, this would include detailed analysis.
+
+3. Child's Preference
+   - Mock consideration of child preferences.
+
+4. Parental Fitness
+   - Mock assessment of parental capabilities.
+
+[In production, this would be a comprehensive enhancement based on California best interests standards]"""
+                tokens_used = len(prompt.split()) + len(enhanced_text.split())
+            else:
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=self.generation_config,
+                    safety_settings=self.safety_settings
+                )
+
+                enhanced_text = response.text if response.text else ""
+                tokens_used = len(prompt.split()) + len(enhanced_text.split())
+
             return {
                 "success": True,
                 "enhanced_text": enhanced_text,
                 "tokens_used": tokens_used,
-                "model": settings.VERTEX_AI_MODEL
+                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
             }
-            
+
         except Exception as e:
             return {
                 "success": False,
@@ -399,7 +576,7 @@ Format each factor as separate paragraph with supporting facts."""
             issues.append("Output too long (more than 5000 words)")
         
         # Check for proper formatting
-        if motion_type := "RFO" in text or "FL-300" in text:
+        if "RFO" in text or "FL-300" in text:
             if not any(char.isdigit() for char in text[:100]):
                 issues.append("Missing numbered paragraphs")
         
@@ -407,6 +584,23 @@ Format each factor as separate paragraph with supporting facts."""
             "valid": len(issues) == 0,
             "issues": issues
         }
+
+    async def enhance_declaration(
+        self,
+        text: str,
+        formal: bool = True,
+        legal_tone: bool = True,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Enhance a declaration by delegating to rewrite_declaration."""
+        result = await self.rewrite_declaration(
+            narrative=text,
+            declarant_name="Declarant",
+            user_id=user_id
+        )
+        # Expose result under 'enhanced_text' key for callers that expect it
+        result["enhanced_text"] = result.get("rewritten_text", "")
+        return result
 
 # Singleton instance
 llm_service = LLMService()

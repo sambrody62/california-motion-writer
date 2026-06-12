@@ -5,23 +5,39 @@ import os
 from typing import List
 from pydantic_settings import BaseSettings
 
+def _generate_secret_key():
+    """Generate a secret key for development"""
+    import secrets as secrets_module
+    return "dev-only-" + secrets_module.token_hex(32)
+
 class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    
+
     # Project
     PROJECT_ID: str = "california-motion-writer"
     REGION: str = "us-central1"
-    
+
     # Database
     DB_HOST: str = os.getenv("DB_HOST", "/cloudsql/california-motion-writer:us-central1:app-sql")
     DB_NAME: str = os.getenv("DB_NAME", "appdb")
     DB_USER: str = os.getenv("DB_USER", "appuser")
     DB_PASSWORD_SECRET: str = os.getenv("DB_PASSWORD_SECRET", "motion-db-password")
-    
+
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "development-secret-key-change-in-production")
+
+    # Security - SECRET_KEY must be set via environment variable
+    SECRET_KEY: str = os.getenv("SECRET_KEY") or (_generate_secret_key() if os.getenv("ENVIRONMENT", "development") == "development" else None)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.SECRET_KEY:
+            if self.ENVIRONMENT != "development":
+                raise ValueError("SECRET_KEY environment variable must be set in production")
+            else:
+                print("WARNING: Using auto-generated SECRET_KEY for development")
+
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     

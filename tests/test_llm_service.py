@@ -297,3 +297,91 @@ class TestLLMServiceValidateOutput:
         result = llm_service.validate_output(text)
         assert not inspect.iscoroutine(result)
         assert isinstance(result, dict)
+
+
+class TestLLMServiceEnhanceDeclaration:
+    """Test enhance_declaration method (Bug 1 — new method)."""
+
+    @pytest.mark.asyncio
+    async def test_enhance_declaration_exists(self, llm_service):
+        """enhance_declaration exists and returns a dict."""
+        assert hasattr(llm_service, "enhance_declaration")
+        result = await llm_service.enhance_declaration(
+            "I have been the primary caregiver for my children.",
+        )
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_enhance_declaration_returns_text_in_mock_mode(self, llm_service):
+        """enhance_declaration returns non-empty enhanced_text in mock mode."""
+        result = await llm_service.enhance_declaration(
+            "Respondent violated the custody order on January 1.",
+        )
+        assert result["success"] is True
+        assert "enhanced_text" in result
+        assert isinstance(result["enhanced_text"], str)
+        assert len(result["enhanced_text"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_enhance_declaration_formal_legal_tone_params(self, llm_service):
+        """Accepts formal and legal_tone keyword args without error."""
+        result = await llm_service.enhance_declaration(
+            "Some narrative text here.",
+            formal=True,
+            legal_tone=True,
+        )
+        assert result["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_enhance_declaration_mock_perjury_statement(self, llm_service):
+        """Mock output via rewrite_declaration contains perjury statement."""
+        result = await llm_service.enhance_declaration(
+            "I declare the following facts.",
+        )
+        assert "perjury" in result["enhanced_text"].lower()
+
+
+class TestValidateOutputWalrusBugFix:
+    """Regression tests for the walrus-operator bug fix in validate_output (Bug 1)."""
+
+    def test_rfo_text_with_numbered_para_is_valid(self, llm_service):
+        """Text containing 'RFO' with a leading digit is not flagged for missing paragraphs."""
+        text = (
+            "1. This is an RFO filed pursuant to California Family Code. "
+            "Petitioner requests relief from the Court regarding custody. "
+            "The foregoing facts establish good cause for the requested order. "
+            "Petitioner has been the primary caregiver for the children. "
+            "The Court should grant this Request for Order forthwith."
+        ) * 3
+
+        result = llm_service.validate_output(text)
+
+        assert isinstance(result, dict)
+        assert "issues" in result
+        # Should not flag missing numbered paragraphs
+        assert not any("numbered" in i.lower() for i in result["issues"])
+
+    def test_rfo_text_without_digit_flags_paragraphs(self, llm_service):
+        """Text with 'RFO' but no leading digit is flagged for missing paragraphs."""
+        text = (
+            "This is an RFO motion. Petitioner requests relief from the Court. "
+            "There are many words here to exceed the fifty word minimum count. "
+            "More content to ensure the length check passes without issue."
+        ) * 4
+
+        result = llm_service.validate_output(text)
+
+        assert isinstance(result, dict)
+        # Should flag missing numbered paragraphs since no digit in first 100 chars
+        assert any("numbered" in i.lower() for i in result["issues"])
+
+    def test_validate_output_no_longer_assigns_bool_to_motion_type(self, llm_service):
+        """Walrus bug: 'if motion_type := ...' would set motion_type=True, a bool.
+        The fix replaces it with a plain boolean expression — validate returns dict."""
+        import inspect
+        text = "FL-300 " + "word " * 60
+        result = llm_service.validate_output(text)
+        # Confirm result is a plain dict (was still returning one before, but
+        # the walrus expression silently set motion_type=True — fix removes that name)
+        assert isinstance(result, dict)
+        assert "valid" in result

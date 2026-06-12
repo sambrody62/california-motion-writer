@@ -22,7 +22,7 @@ class TestAuthentication:
         }
 
         response = await client.post("/api/v1/auth/register", json=user_data)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
 
         assert "access_token" in data
@@ -42,7 +42,7 @@ class TestAuthentication:
 
         # Register first user
         response = await client.post("/api/v1/auth/register", json=user_data)
-        assert response.status_code == 200
+        assert response.status_code == 201
 
         # Try to register with same email
         user_data["full_name"] = "Second User"
@@ -195,7 +195,7 @@ class TestAuthentication:
             "phone": "555-6666"
         }
         response = await client.post("/api/v1/auth/register", json=register_data)
-        assert response.status_code == 200
+        assert response.status_code == 201
 
         token = response.json()["access_token"]
         # Token should be a valid JWT (has 3 parts separated by dots)

@@ -11,8 +11,17 @@ import logging
 import uuid
 import io
 from datetime import datetime
-from google.cloud import pubsub_v1
 import json
+import os
+
+# Conditionally import GCP services
+USE_GCP = os.getenv("USE_GCP", "true").lower() == "true"
+if USE_GCP:
+    try:
+        from google.cloud import pubsub_v1
+    except ImportError:
+        USE_GCP = False
+        pubsub_v1 = None
 
 from app.models.user import User
 from app.models.motion import Motion, MotionDraft, Document
@@ -107,25 +116,29 @@ async def generate_pdf_background(
 ):
     """Background task to generate PDF"""
     try:
-        # Publish to Pub/Sub for processing
-        publisher = pubsub_v1.PublisherClient()
-        topic_path = publisher.topic_path(settings.PROJECT_ID, settings.PUBSUB_TOPIC)
-        
-        message_data = {
-            "action": "generate_pdf",
-            "document_id": document_id,
-            "motion_id": motion_id,
-            "user_id": user_id,
-            "document_type": document_type
-        }
-        
-        future = publisher.publish(
-            topic_path,
-            json.dumps(message_data).encode('utf-8')
-        )
-        
-        message_id = future.result()
-        logger.info(f"Published PDF generation task to Pub/Sub: {message_id}")
+        if USE_GCP and pubsub_v1:
+            # Publish to Pub/Sub for processing
+            publisher = pubsub_v1.PublisherClient()
+            topic_path = publisher.topic_path(settings.PROJECT_ID, settings.PUBSUB_TOPIC)
+
+            message_data = {
+                "action": "generate_pdf",
+                "document_id": document_id,
+                "motion_id": motion_id,
+                "user_id": user_id,
+                "document_type": document_type
+            }
+
+            future = publisher.publish(
+                topic_path,
+                json.dumps(message_data).encode('utf-8')
+            )
+
+            message_id = future.result()
+            logger.info(f"Published PDF generation task to Pub/Sub: {message_id}")
+        else:
+            # For local development, just log the task
+            logger.info(f"Mock PDF generation task for document {document_id} (local development mode)")
         
     except Exception as e:
         logger.error(f"Error publishing to Pub/Sub: {str(e)}")
@@ -277,19 +290,69 @@ async def download_document(
             )
         
         document, motion = row
-        
-        # For now, return error if GCS URL not available
-        # In production, this would download from GCS
-        if not document.gcs_url:
+
+        # Get user profile
+        profile_result = await db.execute(
+            select(Profile).where(Profile.user_id == current_user.id)
+        )
+        profile = profile_result.scalar_one_or_none()
+        if not profile:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Document not yet available. Please try again later."
+                detail="User profile not found. Please complete your profile first."
             )
-        
-        # TODO: Download from GCS and return
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="GCS download not yet implemented"
+
+        # Get motion drafts
+        drafts_result = await db.execute(
+            select(MotionDraft)
+            .where(MotionDraft.motion_id == motion.id)
+            .order_by(MotionDraft.step_number)
+        )
+        drafts = drafts_result.scalars().all()
+
+        profile_data = {
+            "is_petitioner": profile.is_petitioner,
+            "county": profile.county,
+            "case_number": profile.case_number,
+            "party_name": profile.party_name,
+            "other_party_name": profile.other_party_name,
+            "party_address": profile.party_address,
+            "party_phone": profile.party_phone,
+            "other_party_attorney": profile.other_party_attorney,
+            "children_info": profile.children_info or []
+        }
+
+        motion_data = {
+            "motion_type": motion.motion_type,
+            "case_caption": motion.case_caption,
+            "filing_date": motion.filing_date,
+            "hearing_date": motion.hearing_date,
+            "hearing_time": motion.hearing_time
+        }
+
+        llm_sections = [
+            {
+                "step_number": draft.step_number,
+                "section": draft.step_name,
+                "original_answers": draft.question_data,
+                "rewritten_text": draft.llm_output or ""
+            }
+            for draft in drafts
+        ]
+
+        pdf_bytes = await pdf_service.generate_motion_pdf(
+            motion_type=motion.motion_type,
+            motion_data=motion_data,
+            profile_data=profile_data,
+            llm_sections=llm_sections
+        )
+
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={document.filename}"
+            }
         )
         
     except HTTPException:

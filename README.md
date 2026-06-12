@@ -24,7 +24,7 @@ California Motion Writer helps self-represented litigants create properly format
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/california-motion-writer.git
+git clone https://github.com/sambrody/california-motion-writer.git
 cd california-motion-writer
 ```
 
@@ -104,21 +104,69 @@ SECRET_KEY=your-secret-key
 
 ### GCP Setup
 
-1. Create a GCP project
-2. Enable required APIs:
-   - Cloud Run
-   - Cloud SQL
-   - Vertex AI
-   - Secret Manager
-   - Pub/Sub
+#### Prerequisites
 
-3. Set up Cloud SQL instance:
+1. **Create a GCP project**
+```bash
+gcloud projects create california-motion-writer --name="California Motion Writer"
+gcloud config set project california-motion-writer
+```
+
+2. **Enable billing** (required for Cloud SQL and Vertex AI)
+```bash
+gcloud beta billing accounts list
+gcloud beta billing projects link california-motion-writer --billing-account=YOUR_BILLING_ID
+```
+
+3. **Enable required APIs**:
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  sqladmin.googleapis.com \
+  aiplatform.googleapis.com \
+  secretmanager.googleapis.com \
+  pubsub.googleapis.com \
+  cloudbuild.googleapis.com
+```
+
+4. **Set up service account**:
+```bash
+gcloud iam service-accounts create motion-writer-sa \
+  --display-name="Motion Writer Service Account"
+
+gcloud projects add-iam-policy-binding california-motion-writer \
+  --member="serviceAccount:motion-writer-sa@california-motion-writer.iam.gserviceaccount.com" \
+  --role="roles/cloudsql.client"
+
+gcloud projects add-iam-policy-binding california-motion-writer \
+  --member="serviceAccount:motion-writer-sa@california-motion-writer.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+gcloud projects add-iam-policy-binding california-motion-writer \
+  --member="serviceAccount:motion-writer-sa@california-motion-writer.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+5. **Set up Cloud SQL instance**:
 ```bash
 gcloud sql instances create app-sql \
   --database-version=POSTGRES_15 \
   --tier=db-f1-micro \
-  --region=us-central1
+  --region=us-central1 \
+  --network=default
 ```
+
+#### Estimated Monthly Costs (Development)
+
+| Service | Tier | Estimated Cost |
+|---------|------|----------------|
+| Cloud Run | 1M requests | ~$50 |
+| Cloud SQL | db-f1-micro | ~$10 |
+| Vertex AI | 10K API calls | ~$30 |
+| Cloud Storage | 10GB | ~$2 |
+| **Total** | | **~$92/month** |
+
+*Note: Costs may vary based on usage. Set up billing alerts to monitor spending.*
 
 ## 🚢 Deployment
 
@@ -146,11 +194,43 @@ This script will:
 
 Full API documentation available at `/docs` when running.
 
+## 🔒 Security
+
+### Authentication & Authorization
+- **Google Identity Platform** for user authentication
+- **JWT tokens** with 1-hour expiry and refresh tokens
+- **Role-based access control**: user, admin, attorney roles
+- **Session management** with secure HTTP-only cookies
+
+### Data Protection
+- **Encryption at rest**: Cloud SQL automatic encryption
+- **Encryption in transit**: TLS 1.3 for all connections
+- **PII handling**: Compliance with California Consumer Privacy Act (CCPA)
+- **Secrets management**: Google Secret Manager for sensitive data
+- **Input validation**: SQL injection and XSS protection
+
+### Security Best Practices
+- Regular security updates via Dependabot
+- Content Security Policy (CSP) headers
+- Rate limiting on API endpoints
+- Audit logging for all data access
+- No storage of credit card information
+
 ## 🧪 Testing
 
 Run tests:
 ```bash
+# Run all tests
 pytest tests/
+
+# Run with coverage
+pytest tests/ --cov=app --cov-report=html
+
+# Run specific test file
+pytest tests/test_api.py
+
+# Run in verbose mode
+pytest tests/ -v
 ```
 
 ## 📈 Roadmap
@@ -196,11 +276,52 @@ MIT License - see LICENSE file for details
 - Google Cloud Platform for infrastructure
 - FastAPI and Python communities
 
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Local Development
+
+**Problem**: `ModuleNotFoundError: No module named 'app'`
+- **Solution**: Add project root to PYTHONPATH:
+```bash
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+```
+
+**Problem**: Database connection errors
+- **Solution**: Check `.env` file and ensure database is running:
+```bash
+# For local SQLite
+touch test.db
+
+# For Cloud SQL proxy
+gcloud sql connect app-sql --user=appuser
+```
+
+#### Deployment Issues
+
+**Problem**: Cloud Run deployment fails
+- **Solution**: Check service account permissions:
+```bash
+gcloud run services describe motion-api --region=us-central1
+gcloud run services logs read motion-api --region=us-central1
+```
+
+**Problem**: Vertex AI API errors
+- **Solution**: Verify API is enabled and quotas:
+```bash
+gcloud services list --enabled | grep aiplatform
+gcloud compute project-info describe --project=california-motion-writer
+```
+
+### Getting Help
+
 ## 📞 Support
 
 For issues and questions:
-- GitHub Issues: [Report a bug](https://github.com/yourusername/california-motion-writer/issues)
-- Documentation: [Wiki](https://github.com/yourusername/california-motion-writer/wiki)
+- GitHub Issues: [Report a bug](https://github.com/sambrody/california-motion-writer/issues)
+- Documentation: [Wiki](https://github.com/sambrody/california-motion-writer/wiki)
+- Email: support@californiamotion.writer (coming soon)
 
 ---
 

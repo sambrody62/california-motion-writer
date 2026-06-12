@@ -31,3 +31,5 @@ pytest-cov==7.0.0
 aiosqlite==0.20.0
 pydantic-settings==2.1.0
 greenlet==3.0.3
+anthropic==0.109.1
+

@@ -18,7 +18,10 @@ from app.models.user import User, Profile
 from app.models.motion import Motion, MotionType
 import os
 # Choose LLM service based on environment variables
-if os.getenv("USE_OPENAI", "false").lower() == "true":
+if os.getenv("USE_CLAUDE", "false").lower() == "true":
+    # llm_service routes generation to the Claude backend when USE_CLAUDE is set
+    from app.services.llm_service import LLMService
+elif os.getenv("USE_OPENAI", "false").lower() == "true":
     from app.services.openai_llm_service import OpenAILLMService as LLMService
 elif os.getenv("USE_GCP", "false").lower() == "true" and os.getenv("USE_MOCK_LLM", "false").lower() == "false":
     from app.services.vertex_llm_service import VertexLLMService as LLMService
@@ -36,15 +39,25 @@ class ChatService:
         self.violation_service = ViolationFilingService()
 
         # Try to import enhanced LLM chat service if available
-        try:
-            from app.services.llm_chat_service import llm_chat_service
-            self.llm_chat_service = llm_chat_service
-            self.use_llm = True
-            logger.info("Using enhanced LLM chat service")
-        except ImportError:
-            self.llm_chat_service = None
-            self.use_llm = False
-            logger.info("Using pattern-based chat service")
+        if os.getenv("USE_CLAUDE", "false").lower() == "true":
+            from app.services.claude_chat_service import claude_chat_service
+            self.llm_chat_service = claude_chat_service
+            self.use_llm = claude_chat_service.available
+            logger.info(
+                "Using Claude chat service"
+                if self.use_llm
+                else "USE_CLAUDE set but ANTHROPIC_API_KEY missing — pattern-based fallback"
+            )
+        else:
+            try:
+                from app.services.llm_chat_service import llm_chat_service
+                self.llm_chat_service = llm_chat_service
+                self.use_llm = True
+                logger.info("Using enhanced LLM chat service")
+            except ImportError:
+                self.llm_chat_service = None
+                self.use_llm = False
+                logger.info("Using pattern-based chat service")
 
         # Import memory and template services
         try:

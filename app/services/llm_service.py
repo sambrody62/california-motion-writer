@@ -9,8 +9,9 @@ from pathlib import Path
 # Conditionally import GCP services
 USE_GCP = os.getenv("USE_GCP", "true").lower() == "true"
 USE_MOCK_LLM = os.getenv("USE_MOCK_LLM", "false").lower() == "true"
+USE_CLAUDE = os.getenv("USE_CLAUDE", "false").lower() == "true"
 
-if USE_GCP and not USE_MOCK_LLM:
+if USE_GCP and not USE_MOCK_LLM and not USE_CLAUDE:
     try:
         from google.cloud import aiplatform
         from google.cloud.aiplatform import initializer
@@ -38,11 +39,20 @@ class LLMService:
             print(f"Warning: {prompts_path} not found, using default prompts")
             self.prompts_content = ""
 
+        self.claude_backend = None
         if USE_MOCK_LLM:
             print("Using mock LLM for local development")
             self.model = None
             self.generation_config = None
             self.safety_settings = None
+        elif USE_CLAUDE:
+            from app.services.claude_llm_service import ClaudeLLMService
+
+            self.claude_backend = ClaudeLLMService(self._get_system_prompt())
+            self.model = None
+            self.generation_config = None
+            self.safety_settings = None
+            self.operation_configs = {}
         else:
             # Initialize Vertex AI
             vertexai.init(
@@ -238,6 +248,26 @@ Format each factor as separate paragraph with supporting facts."""
         
         return prompt
     
+    async def _generate(
+        self,
+        prompt: str,
+        operation: str,
+        user_id: Optional[str] = None
+    ) -> tuple:
+        """Generate via the configured backend. Returns (text, tokens, model_name)."""
+        if self.claude_backend is not None:
+            return await self.claude_backend.generate(prompt, operation, user_id)
+
+        config = self.operation_configs.get(operation, self.generation_config)
+        response = self.model.generate_content(
+            prompt,
+            generation_config=config,
+            safety_settings=self.safety_settings
+        )
+        text = response.text if response.text else ""
+        tokens = len(prompt.split()) + len(text.split())
+        return text, tokens, settings.VERTEX_AI_MODEL
+
     async def rewrite_rfo_section(
         self,
         section_name: str,
@@ -293,25 +323,11 @@ This is a mock response for local development. In production, this would be a pr
 
 [Mock generated content for {section_name}]"""
                 tokens_used = len(prompt.split()) + len(rewritten_text.split())
+                model_name = "mock-llm"
             else:
-                # Use operation-specific config
-                config = self.operation_configs.get(
-                    "section_rewrite",
-                    self.generation_config
+                rewritten_text, tokens_used, model_name = await self._generate(
+                    prompt, "section_rewrite", user_id
                 )
-
-                # Generate content using Vertex AI
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=config,
-                    safety_settings=self.safety_settings
-                )
-
-                # Extract text
-                rewritten_text = response.text if response.text else ""
-
-                # Count tokens (approximate)
-                tokens_used = len(prompt.split()) + len(rewritten_text.split())
 
                 # Track usage for cost monitoring
                 await track_llm_cost(
@@ -324,7 +340,7 @@ This is a mock response for local development. In production, this would be a pr
                 "success": True,
                 "rewritten_text": rewritten_text,
                 "tokens_used": tokens_used,
-                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
+                "model": model_name
             }
 
         except Exception as e:
@@ -384,21 +400,11 @@ I declare under penalty of perjury under the laws of the State of California tha
 [Mock Signature]
 {declarant_name}"""
                 tokens_used = len(prompt.split()) + len(rewritten_text.split())
+                model_name = "mock-llm"
             else:
-                # Use declaration-specific config
-                config = self.operation_configs.get(
-                    "declaration",
-                    self.generation_config
+                rewritten_text, tokens_used, model_name = await self._generate(
+                    prompt, "declaration", user_id
                 )
-
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=config,
-                    safety_settings=self.safety_settings
-                )
-
-                rewritten_text = response.text if response.text else ""
-                tokens_used = len(prompt.split()) + len(rewritten_text.split())
 
                 # Track usage
                 await track_llm_cost(
@@ -411,7 +417,7 @@ I declare under penalty of perjury under the laws of the State of California tha
                 "success": True,
                 "rewritten_text": rewritten_text,
                 "tokens_used": tokens_used,
-                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
+                "model": model_name
             }
 
         except Exception as e:
@@ -453,21 +459,17 @@ Best Interests Factors (Mock):
 
 [In production, this would be a comprehensive enhancement based on California best interests standards]"""
                 tokens_used = len(prompt.split()) + len(enhanced_text.split())
+                model_name = "mock-llm"
             else:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=self.generation_config,
-                    safety_settings=self.safety_settings
+                enhanced_text, tokens_used, model_name = await self._generate(
+                    prompt, "best_interests"
                 )
-
-                enhanced_text = response.text if response.text else ""
-                tokens_used = len(prompt.split()) + len(enhanced_text.split())
 
             return {
                 "success": True,
                 "enhanced_text": enhanced_text,
                 "tokens_used": tokens_used,
-                "model": "mock-llm" if USE_MOCK_LLM else settings.VERTEX_AI_MODEL
+                "model": model_name
             }
 
         except Exception as e:
@@ -524,9 +526,17 @@ Best Interests Factors (Mock):
             "motion_type": motion_type,
             "sections": results,
             "total_tokens": total_tokens,
-            "model": settings.VERTEX_AI_MODEL,
+            "model": self._backend_model_name(),
             "success": all(r.get("success") for r in results)
         }
+
+    def _backend_model_name(self) -> str:
+        if USE_MOCK_LLM:
+            return "mock-llm"
+        if self.claude_backend is not None:
+            from app.services.claude_llm_service import DRAFTING_MODEL
+            return DRAFTING_MODEL
+        return settings.VERTEX_AI_MODEL
     
     def _format_answers_to_narrative(self, answers: Dict[str, Any]) -> str:
         """Convert Q&A answers to narrative text"""
@@ -579,10 +589,29 @@ Best Interests Factors (Mock):
         if "RFO" in text or "FL-300" in text:
             if not any(char.isdigit() for char in text[:100]):
                 issues.append("Missing numbered paragraphs")
-        
+
+        # UPL guard (PRD compliance C3): generated documents must never give
+        # legal advice — flag advice-like phrasing for regeneration/review
+        advice_phrases = [
+            "you should",
+            "i recommend",
+            "i advise",
+            "i suggest",
+            "your best option",
+            "the best thing to do",
+            "you need to file",
+        ]
+        upl_flags = [
+            f"Advice-like phrasing (UPL risk): '{phrase}'"
+            for phrase in advice_phrases
+            if phrase in text.lower()
+        ]
+        issues.extend(upl_flags)
+
         return {
             "valid": len(issues) == 0,
-            "issues": issues
+            "issues": issues,
+            "upl_flags": upl_flags
         }
 
     async def enhance_declaration(

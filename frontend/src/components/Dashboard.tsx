@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motionAPI } from '../services/api';
+import { motionAPI, profileAPI } from '../services/api';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
-import { PlusIcon, DocumentTextIcon, ClockIcon } from '@heroicons/react/20/solid';
+import {
+  PlusIcon,
+  DocumentTextIcon,
+  ClockIcon,
+  UserIcon,
+  ChatBubbleBottomCenterTextIcon,
+  SparklesIcon,
+  ArrowRightIcon
+} from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 
 interface Motion {
@@ -22,26 +30,50 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useFirebaseAuth();
   const [motions, setMotions] = useState<Motion[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadMotions();
+    loadDashboardData();
   }, []);
 
-  const loadMotions = async () => {
+  const loadDashboardData = async () => {
     try {
-      const response = await motionAPI.listMotions();
-      setMotions(response.data.motions || []);
+      // Load profile
+      try {
+        const profileResponse = await profileAPI.get();
+        setProfile(profileResponse);
+      } catch (profileError) {
+        console.log('No profile found, user needs to set up profile');
+      }
+
+      // Load motions
+      const motionsResponse = await motionAPI.list();
+      setMotions(motionsResponse.data.motions || []);
     } catch (error) {
-      console.error('Failed to load motions:', error);
+      console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const startNewMotion = (motionType: string) => {
-    navigate(`/motion/new/${motionType}`);
+  const startNewCase = () => {
+    if (!profile) {
+      navigate('/profile/setup');
+      return;
+    }
+    navigate('/case/intake');
   };
+
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
+  };
+
 
   const getStatusBadge = (status: string) => {
     const statusColors: { [key: string]: string } = {
@@ -76,13 +108,14 @@ export const Dashboard: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 onClick={() => navigate('/profile/setup')}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
+                <UserIcon className="h-4 w-4 mr-2" />
                 Profile
               </button>
               <button
-                onClick={logout}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                onClick={handleSignOut}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Sign Out
               </button>
@@ -92,50 +125,84 @@ export const Dashboard: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* New Motion Section */}
-        <div className="mb-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Start a New Motion</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <button
-              onClick={() => startNewMotion('RFO')}
-              className="relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-            >
-              <div className="flex-shrink-0">
-                <DocumentTextIcon className="h-10 w-10 text-indigo-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="absolute inset-0" aria-hidden="true" />
-                <p className="text-sm font-medium text-gray-900">Request for Order (FL-300)</p>
-                <p className="text-sm text-gray-500">File a new request with the court</p>
-              </div>
-            </button>
 
-            <button
-              onClick={() => startNewMotion('Response')}
-              className="relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
-            >
-              <div className="flex-shrink-0">
-                <DocumentTextIcon className="h-10 w-10 text-green-600" />
+        {/* Profile Setup Notice */}
+        {!profile && (
+          <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  <strong>Complete your profile first:</strong> Set up your profile to auto-fill form information and save time.
+                  <button
+                    onClick={() => navigate('/profile/setup')}
+                    className="ml-2 font-medium underline hover:text-yellow-800"
+                  >
+                    Set up profile →
+                  </button>
+                </p>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="absolute inset-0" aria-hidden="true" />
-                <p className="text-sm font-medium text-gray-900">Response to RFO (FL-320)</p>
-                <p className="text-sm text-gray-500">Respond to a filed motion</p>
-              </div>
-            </button>
+            </div>
+          </div>
+        )}
 
-            <button
-              disabled
-              className="relative rounded-lg border border-gray-300 bg-gray-50 px-6 py-4 shadow-sm flex items-center space-x-3 opacity-50 cursor-not-allowed"
-            >
-              <div className="flex-shrink-0">
-                <DocumentTextIcon className="h-10 w-10 text-gray-400" />
+        {/* Main Hero Section */}
+        <div className="text-center mb-12">
+          <div className="flex justify-center mb-6">
+            <div className="bg-indigo-100 p-4 rounded-full">
+              <SparklesIcon className="h-12 w-12 text-indigo-600" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Get Legal Help for Your Family Law Case
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            Tell us about your family law situation and we'll create a personalized legal strategy,
+            determine which California court forms you need, and help you fill them out correctly.
+          </p>
+
+          <button
+            onClick={startNewCase}
+            className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <ChatBubbleBottomCenterTextIcon className="h-6 w-6 mr-3" />
+            Start Your Case
+            <ArrowRightIcon className="h-5 w-5 ml-2" />
+          </button>
+        </div>
+
+        {/* How It Works */}
+        <div className="mb-12">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">How It Works</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-blue-600">1</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">More Forms</p>
-                <p className="text-sm text-gray-500">Coming soon</p>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Explain Your Case</h4>
+              <p className="text-gray-600">
+                Tell us about your family law situation, what you want to achieve, and any existing orders or issues.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-green-600">2</span>
               </div>
-            </button>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Get Your Strategy</h4>
+              <p className="text-gray-600">
+                Our AI creates a personalized legal gameplan and determines exactly which California forms you need.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-purple-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-purple-600">3</span>
+              </div>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">File Your Forms</h4>
+              <p className="text-gray-600">
+                We help you fill out the forms correctly and generate ready-to-file PDFs for the court.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -199,11 +266,11 @@ export const Dashboard: React.FC = () => {
               <p className="mt-1 text-sm text-gray-500">Get started by creating a new motion.</p>
               <div className="mt-6">
                 <button
-                  onClick={() => startNewMotion('RFO')}
+                  onClick={startNewCase}
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                  New Request for Order
+                  <ChatBubbleBottomCenterTextIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+                  Start Your Case
                 </button>
               </div>
             </div>

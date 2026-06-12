@@ -10,7 +10,7 @@ interface FirebaseAuthContextType {
   logout: () => Promise<void>;
 }
 
-const FirebaseAuthContext = createContext<FirebaseAuthContextType | undefined>(undefined);
+export const FirebaseAuthContext = createContext<FirebaseAuthContextType | undefined>(undefined);
 
 export const useFirebaseAuth = () => {
   const context = useContext(FirebaseAuthContext);

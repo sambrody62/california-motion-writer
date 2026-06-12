@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { motionAPI, intakeAPI } from '../../services/api';
+import { motionAPI, intakeAPI, profileAPI } from '../../services/api';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '@heroicons/react/20/solid';
+import { FORM_METADATA, FormType, FORM_TYPES } from '../../types/forms';
 
 interface Question {
   id: string;
@@ -21,25 +22,56 @@ interface IntakeStep {
   step_name: string;
   description: string;
   questions: Question[];
+  total_steps?: number;
 }
 
-export const GuidedIntake: React.FC = () => {
-  const { motionType } = useParams<{ motionType: string }>();
+// Fields that can be auto-filled from user profile
+const PROFILE_FIELD_MAP: Record<string, string> = {
+  party_name: 'party_name',
+  other_party_name: 'other_party_name',
+  case_number: 'case_number',
+  county: 'county',
+  children_info: 'children_info',
+};
+
+interface GuidedIntakeProps {
+  onComplete?: (motionId: string) => void;
+}
+
+export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
+  const { motionType, formType } = useParams<{ motionType?: string; formType?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as any;
+
+  const currentFormType = formType || motionType;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [totalSteps, setTotalSteps] = useState(6);
   const [stepData, setStepData] = useState<IntakeStep | null>(null);
   const [motionId, setMotionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processingLLM, setProcessingLLM] = useState(false);
   const [visibleQuestions, setVisibleQuestions] = useState<Question[]>([]);
   const [allAnswers, setAllAnswers] = useState<any>({});
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm();
+  const [profile, setProfile] = useState<any>(null);
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
 
+  const { register, handleSubmit, watch, reset, setValue, getValues, formState: { errors } } = useForm();
   const watchedValues = watch();
 
+  const getFormTitle = () => {
+    if (!currentFormType) return 'Form';
+    if (currentFormType === 'RFO') return 'Request for Order (FL-300)';
+    if (currentFormType === 'Response') return 'Response to RFO (FL-320)';
+    const formMetadata = FORM_METADATA[currentFormType as FormType];
+    return formMetadata ? `${formMetadata.name} (${formMetadata.id})` : currentFormType;
+  };
+
   useEffect(() => {
+    loadProfile();
     initializeMotion();
-  }, [motionType]);
+  }, [currentFormType]);
 
   useEffect(() => {
     if (motionId) {
@@ -53,13 +85,53 @@ export const GuidedIntake: React.FC = () => {
     }
   }, [stepData, watchedValues]);
 
+  // Apply profile autofill whenever profile and stepData are both loaded
+  useEffect(() => {
+    if (profile && stepData) {
+      applyProfileAutofill();
+    }
+  }, [profile, stepData]);
+
+  const loadProfile = async () => {
+    try {
+      const data = await profileAPI.getProfile();
+      setProfile(data);
+    } catch {
+      // No profile — autofill skipped silently
+    }
+  };
+
+  const applyProfileAutofill = () => {
+    if (!profile || !stepData) return;
+    const newPrefilled = new Set<string>();
+
+    stepData.questions.forEach((question) => {
+      const profileKey = PROFILE_FIELD_MAP[question.id];
+      if (!profileKey) return;
+      const profileValue = profile[profileKey];
+      if (!profileValue) return;
+
+      // Only fill if the field is currently empty
+      const currentValue = getValues(question.id);
+      if (!currentValue) {
+        setValue(question.id, profileValue, { shouldValidate: false });
+        newPrefilled.add(question.id);
+      }
+    });
+
+    if (newPrefilled.size > 0) {
+      setPrefilledFields(newPrefilled);
+    }
+  };
+
   const initializeMotion = async () => {
     try {
-      const response = await motionAPI.createMotion({
-        motion_type: motionType,
-        status: 'draft'
+      const response = await motionAPI.create({
+        motion_type: currentFormType,
+        status: 'draft',
       });
-      setMotionId(response.data.id);
+      const id = response?.data?.id || response?.id;
+      setMotionId(id);
     } catch (error) {
       console.error('Failed to create motion:', error);
       navigate('/dashboard');
@@ -69,12 +141,15 @@ export const GuidedIntake: React.FC = () => {
   const loadStep = async (stepNumber: number) => {
     try {
       setLoading(true);
-      const response = await intakeAPI.getQuestions(motionType!, stepNumber);
+      const response = await intakeAPI.getQuestions(currentFormType!, stepNumber);
       setStepData(response.data);
-      
-      // Load any saved answers for this step
+
+      if (response.data.total_steps) {
+        setTotalSteps(response.data.total_steps);
+      }
+
       if (motionId) {
-        const draftsResponse = await motionAPI.getDrafts(motionId);
+        const draftsResponse = await (motionAPI as any).getDrafts(motionId);
         const savedDraft = draftsResponse.data.drafts.find(
           (d: any) => d.step_number === stepNumber
         );
@@ -93,7 +168,6 @@ export const GuidedIntake: React.FC = () => {
 
   const evaluateConditionalQuestions = async () => {
     if (!stepData) return;
-
     const visible: Question[] = [];
     const context = { ...allAnswers, ...watchedValues };
 
@@ -102,12 +176,11 @@ export const GuidedIntake: React.FC = () => {
         visible.push(question);
       } else {
         try {
-          const response = await intakeAPI.evaluateCondition(question.condition, context);
+          const response = await (intakeAPI as any).evaluateCondition(question.condition, context);
           if (response.data.result) {
             visible.push(question);
           }
         } catch {
-          // If evaluation fails, show the question
           visible.push(question);
         }
       }
@@ -118,19 +191,45 @@ export const GuidedIntake: React.FC = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      // Save answers for current step
-      await motionAPI.saveDraft(motionId!, currentStep, data);
-      
-      // Update all answers context
+      await (motionAPI as any).saveDraft(motionId!, currentStep, data);
       setAllAnswers({ ...allAnswers, ...data });
 
       if (currentStep < totalSteps) {
         setCurrentStep(currentStep + 1);
-      } else {
-        // Process with LLM and go to preview
-        await motionAPI.processWithLLM(motionId!);
-        navigate(`/motion/${motionId}/preview`);
+        return;
       }
+
+      // Final step — process with LLM
+      setProcessingLLM(true);
+      let llmFailed = false;
+
+      try {
+        await (motionAPI as any).processWithLLM(motionId!);
+      } catch (llmError) {
+        console.error('LLM processing failed, proceeding with user words:', llmError);
+        llmFailed = true;
+      } finally {
+        setProcessingLLM(false);
+      }
+
+      if (onComplete) {
+        onComplete(motionId!);
+      }
+
+      // If launched from FormExecution, navigate back to signal completion
+      if (locationState?.fromFormExecution) {
+        navigate('/form/execution', {
+          state: {
+            ...locationState,
+            completedFormIndex: locationState.formExecutionFormIndex,
+          },
+        });
+        return;
+      }
+
+      navigate(`/motion/${motionId}/preview`, {
+        state: { llmFailed },
+      });
     } catch (error) {
       console.error('Failed to save step:', error);
     }
@@ -148,6 +247,7 @@ export const GuidedIntake: React.FC = () => {
         return (
           <input
             {...register(question.id, { required: question.required })}
+            id={question.id}
             type="text"
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             placeholder={question.placeholder}
@@ -158,6 +258,7 @@ export const GuidedIntake: React.FC = () => {
         return (
           <textarea
             {...register(question.id, { required: question.required })}
+            id={question.id}
             rows={4}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             placeholder={question.placeholder}
@@ -249,6 +350,20 @@ export const GuidedIntake: React.FC = () => {
     }
   };
 
+  // Show LLM processing screen — never a blank screen during this phase
+  if (processingLLM) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-700 text-lg">
+            Reviewing your answers and drafting court language…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -264,7 +379,7 @@ export const GuidedIntake: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-medium text-gray-900">
-              {motionType === 'RFO' ? 'Request for Order' : 'Response to RFO'}
+              {getFormTitle()}
             </h2>
             <span className="text-sm text-gray-500">
               Step {currentStep} of {totalSteps}
@@ -290,11 +405,19 @@ export const GuidedIntake: React.FC = () => {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {visibleQuestions.map((question) => (
                   <div key={question.id}>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor={question.id}
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       {question.label}
                       {question.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     {renderQuestion(question)}
+                    {prefilledFields.has(question.id) && (
+                      <p className="mt-1 text-xs text-indigo-600">
+                        Filled from your profile
+                      </p>
+                    )}
                     {question.help_text && (
                       <p className="mt-1 text-sm text-gray-500">{question.help_text}</p>
                     )}

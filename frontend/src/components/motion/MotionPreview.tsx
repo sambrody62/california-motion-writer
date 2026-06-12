@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motionAPI, documentAPI } from '../../services/api';
-import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, CheckCircleIcon } from '@heroicons/react/20/solid';
+import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
 
 interface MotionDraft {
@@ -24,14 +24,23 @@ interface Motion {
   status: string;
 }
 
+interface LocationState {
+  llmFailed?: boolean;
+}
+
 export const MotionPreview: React.FC = () => {
   const { motionId } = useParams<{ motionId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
+
   const [motion, setMotion] = useState<Motion | null>(null);
   const [drafts, setDrafts] = useState<MotionDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const llmFailed = locationState?.llmFailed === true;
 
   useEffect(() => {
     loadMotionData();
@@ -41,10 +50,9 @@ export const MotionPreview: React.FC = () => {
     try {
       setLoading(true);
       const [motionResponse, draftsResponse] = await Promise.all([
-        motionAPI.getMotion(motionId!),
-        motionAPI.getDrafts(motionId!)
+        motionAPI.get(motionId!),
+        (motionAPI as any).getDrafts(motionId!),
       ]);
-      
       setMotion(motionResponse.data);
       setDrafts(draftsResponse.data.drafts || []);
     } catch (error) {
@@ -58,30 +66,32 @@ export const MotionPreview: React.FC = () => {
   const generatePDF = async () => {
     try {
       setGenerating(true);
-      const response = await documentAPI.generatePDFSync(motionId!);
-      
-      // Create blob URL for download
+      setPdfError(null);
+
+      const response = await (documentAPI as any).generatePDFSync(motionId!);
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      setDownloadUrl(url);
-      
-      // Auto-download
+
+      const filename = `${motion?.motion_type || 'motion'}-${motion?.case_number || 'draft'}.pdf`;
+
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${motion?.case_number || 'motion'}_${motion?.motion_type}_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      setPdfError(
+        'PDF generation failed. Your draft is saved on our servers — try again or come back later.'
+      );
     } finally {
       setGenerating(false);
     }
   };
 
   const editSection = (stepNumber: number) => {
-    // Navigate back to intake with specific step
     navigate(`/motion/${motionId}/edit/${stepNumber}`);
   };
 
@@ -131,6 +141,43 @@ export const MotionPreview: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* LLM failure notice — non-blocking */}
+        {llmFailed && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  We couldn't polish your wording — your own words are legally valid.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PDF error state */}
+        {pdfError && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm text-red-700">{pdfError}</p>
+              </div>
+              <button
+                onClick={generatePDF}
+                disabled={generating}
+                className="ml-4 text-sm font-medium text-red-700 underline hover:text-red-600 disabled:opacity-50"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Status Banner */}
         <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">

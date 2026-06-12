@@ -1,4 +1,5 @@
-import { 
+import { localAuthService } from '../auth/local-auth.service';
+import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -8,9 +9,23 @@ import {
 import { auth, db } from '../../config/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
+// Conditional logic for Firebase vs Local auth
+const USE_LOCAL_AUTH = process.env.REACT_APP_USE_LOCAL_AUTH === 'true' ||
+                       process.env.NODE_ENV === 'development';
+
 export class FirebaseAuthService {
   // Register new user
   async register(email: string, password: string) {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      const result = await localAuthService.register(email, password);
+      if (result.success) {
+        return { success: true, user: localAuthService.createMockFirebaseUser() };
+      }
+      return result;
+    }
+
+    // Original Firebase implementation
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -30,6 +45,16 @@ export class FirebaseAuthService {
 
   // Login user
   async login(email: string, password: string) {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      const result = await localAuthService.login(email, password);
+      if (result.success) {
+        return { success: true, user: localAuthService.createMockFirebaseUser() };
+      }
+      return result;
+    }
+
+    // Original Firebase implementation
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       return { success: true, user: userCredential.user };
@@ -40,6 +65,12 @@ export class FirebaseAuthService {
 
   // Logout user
   async logout() {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      return await localAuthService.logout();
+    }
+
+    // Original Firebase implementation
     try {
       await signOut(auth);
       return { success: true };
@@ -50,16 +81,37 @@ export class FirebaseAuthService {
 
   // Get current user
   getCurrentUser(): User | null {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      const mockUser = localAuthService.createMockFirebaseUser();
+      return mockUser as User;
+    }
+
+    // Original Firebase implementation
     return auth.currentUser;
   }
 
   // Listen to auth state changes
   onAuthStateChanged(callback: (user: User | null) => void) {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      return localAuthService.onAuthStateChanged((user) => {
+        callback(user ? localAuthService.createMockFirebaseUser() as User : null);
+      });
+    }
+
+    // Original Firebase implementation
     return onAuthStateChanged(auth, callback);
   }
 
   // Get user data from Firestore
   async getUserData(uid: string) {
+    // Use local auth for development
+    if (USE_LOCAL_AUTH) {
+      return await localAuthService.getUserData();
+    }
+
+    // Original Firebase implementation
     try {
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {

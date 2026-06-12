@@ -5,14 +5,19 @@ import { profileAPI } from '../../services/api';
 import { UserIcon, HomeIcon, PhoneIcon } from '@heroicons/react/20/solid';
 
 interface ProfileFormData {
-  is_petitioner: boolean;
+  is_petitioner: boolean | string; // Can be string from radio button
   county: string;
   case_number: string;
+  court_branch?: string;
+  department?: string;
   party_name: string;
   other_party_name: string;
   party_address: string;
   party_phone: string;
+  other_party_address?: string;
   other_party_attorney: string;
+  marriage_date?: string;
+  separation_date?: string;
   children_info: Array<{
     name: string;
     date_of_birth: string;
@@ -37,43 +42,108 @@ export const ProfileSetup: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState<any[]>([]);
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<ProfileFormData>();
+  const [profileData, setProfileData] = useState<ProfileFormData | null>(null);
+
+  // Initialize form with default values from profileData
+  const { register, handleSubmit, setValue, reset, formState: { errors, isSubmitting } } = useForm<ProfileFormData>({
+    defaultValues: profileData || {}
+  });
 
   useEffect(() => {
     // Load existing profile if available
-    profileAPI.getProfile()
-      .then(response => {
-        const profile = response.data;
-        Object.keys(profile).forEach(key => {
-          setValue(key as any, profile[key]);
-        });
-        if (profile.children_info) {
-          setChildren(profile.children_info);
+    profileAPI.get()
+      .then((response: any) => {
+        console.log('Profile API response:', response);
+        // The response is already the profile data, not wrapped in a data property
+        const profile = response;
+
+        // Set form values from the loaded profile
+        if (profile) {
+          console.log('Setting form values from profile:', profile);
+
+          const formData = {
+            case_number: profile.case_number || '',
+            county: profile.county || '',
+            court_branch: profile.court_branch || '',
+            department: profile.department || '',
+            is_petitioner: profile.is_petitioner !== undefined ? (profile.is_petitioner ? 'true' : 'false') : 'true',
+            party_name: profile.party_name || '',
+            party_address: profile.party_address || '',
+            party_phone: profile.party_phone || '',
+            other_party_name: profile.other_party_name || '',
+            other_party_address: profile.other_party_address || '',
+            other_party_attorney: profile.other_party_attorney || '',
+            children_info: profile.children_info || []
+          };
+
+          setProfileData(formData);
+
+          // Reset the entire form with new data
+          reset(formData);
+
+          // Set children info if available
+          if (profile.children_info && Array.isArray(profile.children_info)) {
+            setChildren(profile.children_info);
+          }
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.log('No profile found or error loading profile:', error);
         // No profile yet
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [setValue]);
+  }, [reset]);
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
       setError('');
-      data.children_info = children;
-      
+
+      // Convert string values to proper types
+      const processedData = {
+        ...data,
+        is_petitioner: data.is_petitioner === 'true' || data.is_petitioner === true,
+        children_info: children,
+        // Ensure dates are properly formatted
+        marriage_date: data.marriage_date || undefined,
+        separation_date: data.separation_date || undefined
+      };
+
       // Try to update first, if that fails, create
       try {
-        await profileAPI.updateProfile(data);
+        await profileAPI.update(processedData);
       } catch {
-        await profileAPI.createProfile(data);
+        await profileAPI.create(processedData);
       }
-      
+
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to save profile');
+      // Handle different error formats from the API
+      let errorMessage = 'Failed to save profile';
+
+      // Check for authentication errors
+      if (err.response?.status === 401 || err.response?.data?.detail === 'Could not validate credentials') {
+        errorMessage = 'Your session has expired. Please log out and log in again.';
+        // Optionally redirect to login after a delay
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      } else if (err.response?.data?.detail) {
+        // FastAPI validation errors can be an array of objects
+        if (Array.isArray(err.response.data.detail)) {
+          errorMessage = err.response.data.detail.map((e: any) =>
+            typeof e === 'string' ? e : e.msg || JSON.stringify(e)
+          ).join(', ');
+        } else if (typeof err.response.data.detail === 'string') {
+          errorMessage = err.response.data.detail;
+        } else {
+          errorMessage = JSON.stringify(err.response.data.detail);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     }
   };
 
@@ -123,6 +193,7 @@ export const ProfileSetup: React.FC = () => {
                       {...register('is_petitioner')}
                       type="radio"
                       value="true"
+                      defaultChecked
                       className="form-radio h-4 w-4 text-indigo-600"
                     />
                     <span className="ml-2">Petitioner</span>

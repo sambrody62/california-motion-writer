@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
+import { auth } from '../services/api';
 
 interface User {
   id: string;
@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      authAPI.getCurrentUser()
+      auth.getProfile()
         .then(response => {
           setUser(response.data);
         })
@@ -52,14 +52,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
+    const response = await auth.login(email, password);
     const { access_token, user } = response.data;
     localStorage.setItem('token', access_token);
     setUser(user);
   };
 
   const register = async (email: string, password: string) => {
-    const response = await authAPI.register(email, password);
+    const response = await auth.register({ email, password, full_name: '' });
     const { access_token, user } = response.data;
     localStorage.setItem('token', access_token);
     setUser(user);

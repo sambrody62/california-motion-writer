@@ -14,9 +14,18 @@ jest.mock('./contexts/FirebaseAuthContext', () => ({
   })
 }));
 
+// HashRouter was removed in react-router-dom v7; provide it as an alias for BrowserRouter
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    HashRouter: actual.BrowserRouter,
+  };
+});
+
 test('renders California Motion Writer app', () => {
   render(<App />);
-  // Check for the app title that appears on the login page
-  const titleElement = screen.getByText(/California Motion Writer/i);
+  // Check for text that appears on the login page (login is shown when user is unauthenticated)
+  const titleElement = screen.getByText(/Sign in to your account/i);
   expect(titleElement).toBeInTheDocument();
 });

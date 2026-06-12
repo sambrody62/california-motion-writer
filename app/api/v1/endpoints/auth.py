@@ -78,7 +78,7 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-@router.post("/register", response_model=Token)
+@router.post("/register", status_code=201)
 async def register(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
@@ -91,7 +91,7 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # Create new user
     user = User(
         email=user_data.email,
@@ -101,14 +101,21 @@ async def register(
     )
     db.add(user)
     await db.commit()
-    
+    await db.refresh(user)
+
     # Create token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
 
 @router.post("/token", response_model=Token)
 async def login(

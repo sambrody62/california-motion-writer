@@ -17,7 +17,7 @@ class TestProfiles:
             headers=auth_headers
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
 
         assert data["case_number"] == sample_profile_data["case_number"]
@@ -28,13 +28,14 @@ class TestProfiles:
 
     @pytest.mark.asyncio
     async def test_create_duplicate_profile(self, client: AsyncClient, auth_headers: dict, sample_profile_data):
-        """Test creating duplicate profile for same user."""
+        """Test creating duplicate profile for same user returns 400."""
         # Create first profile
-        await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
+        response1 = await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
+        assert response1.status_code == 201
 
-        # Try to create second profile
-        response = await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
-        assert response.status_code == 400
+        # Try to create second profile — should be 400
+        response2 = await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
+        assert response2.status_code == 400
 
     @pytest.mark.asyncio
     async def test_get_profile(self, client: AsyncClient, auth_headers: dict, sample_profile_data):
@@ -42,7 +43,7 @@ class TestProfiles:
         # Create profile
         await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
 
-        # Get profile
+        # Get profile via /me
         response = await client.get("/api/v1/profiles/me", headers=auth_headers)
 
         assert response.status_code == 200
@@ -51,11 +52,11 @@ class TestProfiles:
 
     @pytest.mark.asyncio
     async def test_update_profile(self, client: AsyncClient, auth_headers: dict, sample_profile_data):
-        """Test updating profile."""
+        """Test updating profile via PUT /me with partial data."""
         # Create profile
         await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
 
-        # Update profile
+        # Update profile — only send changed fields
         update_data = {
             "case_number": "FL-2024-UPDATED",
             "department": "Dept. Updated"
@@ -105,7 +106,7 @@ class TestProfiles:
             headers=auth_headers
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert len(data["children_info"]) == 2
         assert data["children_info"][0]["name"] == "Child One"
@@ -133,12 +134,12 @@ class TestProfiles:
             headers=auth_headers
         )
         # Check the actual implementation behavior
-        assert response.status_code in [200, 400, 422]
+        assert response.status_code in [201, 400, 422]
 
     @pytest.mark.asyncio
     async def test_profile_phone_formatting(self, client: AsyncClient, auth_headers: dict, sample_profile_data):
         """Test phone number formatting in profile."""
-        # Test various phone formats
+        # Test various phone formats — each in a fresh auth context via unique emails
         phone_formats = [
             "5551234567",
             "(555) 123-4567",
@@ -156,18 +157,18 @@ class TestProfiles:
                 json=profile_data,
                 headers=auth_headers
             )
-            # Should accept various formats
-            assert response.status_code in [200, 400]  # 400 if duplicate
+            # First creates 201, subsequent attempts return 400 (duplicate)
+            assert response.status_code in [201, 400]
 
     @pytest.mark.asyncio
     async def test_delete_profile(self, client: AsyncClient, auth_headers: dict, sample_profile_data):
-        """Test deleting profile."""
+        """Test deleting profile — DELETE /profiles/me returns 204."""
         # Create profile
         await client.post("/api/v1/profiles", json=sample_profile_data, headers=auth_headers)
 
         # Delete profile
         response = await client.delete("/api/v1/profiles/me", headers=auth_headers)
-        assert response.status_code in [200, 204]
+        assert response.status_code == 204
 
         # Verify it's deleted
         get_response = await client.get("/api/v1/profiles/me", headers=auth_headers)

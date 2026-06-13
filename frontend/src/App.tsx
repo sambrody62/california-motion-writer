@@ -14,6 +14,8 @@ import { GameplanCreation } from './components/case/GameplanCreation';
 import { FormExecution } from './components/case/FormExecution';
 import { PrivateRoute } from './components/PrivateRoute';
 import ChatInterface from './components/chat/ChatInterface';
+import { EmergencyHelp } from './components/emergency/EmergencyHelp';
+import { ViolationIntake } from './components/violation/ViolationIntake';
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/emergency" element={<EmergencyHelp />} />
           
           {/* Protected routes */}
           <Route
@@ -137,6 +140,16 @@ function App() {
             }
           />
           
+          {/* Violation/enforcement intake */}
+          <Route
+            path="/violation/intake"
+            element={
+              <PrivateRoute>
+                <ViolationIntake />
+              </PrivateRoute>
+            }
+          />
+
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

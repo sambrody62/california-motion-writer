@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motionAPI, intakeAPI, profileAPI } from '../../services/api';
-import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '@heroicons/react/20/solid';
+import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
 import { FORM_METADATA, FormType, FORM_TYPES } from '../../types/forms';
+import { addCourtDays, formatCourtDeadline } from '../../utils/courtDays';
 
 interface Question {
   id: string;
@@ -56,6 +57,9 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const [allAnswers, setAllAnswers] = useState<any>({});
   const [profile, setProfile] = useState<any>(null);
   const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [responseDeadline, setResponseDeadline] = useState<string | null>(null);
+  // Track last visible question IDs to avoid infinite update loops from evaluateConditionalQuestions
+  const visibleQuestionIdsRef = useRef<string>('');
 
   const { register, handleSubmit, watch, reset, setValue, getValues, formState: { errors } } = useForm();
   const watchedValues = watch();
@@ -91,6 +95,27 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       applyProfileAutofill();
     }
   }, [profile, stepData]);
+
+  // FL-320: compute response deadline whenever date_served changes
+  useEffect(() => {
+    const isResponseForm =
+      currentFormType === FORM_TYPES.FL_320 ||
+      currentFormType === 'FL-320' ||
+      currentFormType === 'Response';
+    if (!isResponseForm) return;
+
+    const dateServed: string = watchedValues.date_served;
+    if (!dateServed) {
+      setResponseDeadline(null);
+      return;
+    }
+
+    // Parse as local date to avoid UTC shift
+    const [year, month, day] = dateServed.split('-').map(Number);
+    const served = new Date(year, month - 1, day);
+    const deadline = addCourtDays(served, 9);
+    setResponseDeadline(formatCourtDeadline(deadline));
+  }, [watchedValues.date_served, currentFormType]);
 
   const loadProfile = async () => {
     try {
@@ -186,7 +211,12 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       }
     }
 
-    setVisibleQuestions(visible);
+    // Only update state if visible question set actually changed (prevents render loops)
+    const newIds = visible.map(q => q.id).join(',');
+    if (newIds !== visibleQuestionIdsRef.current) {
+      visibleQuestionIdsRef.current = newIds;
+      setVisibleQuestions(visible);
+    }
   };
 
   const onSubmit = async (data: any) => {
@@ -315,6 +345,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
         return (
           <input
             {...register(question.id, { required: question.required })}
+            id={question.id}
             type="date"
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
@@ -324,6 +355,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
         return (
           <input
             {...register(question.id, { required: question.required })}
+            id={question.id}
             type="time"
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
@@ -401,6 +433,18 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
                 {stepData.step_name}
               </h3>
               <p className="text-gray-600 mb-6">{stepData.description}</p>
+
+              {responseDeadline && (
+                <div className="mb-6 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
+                  <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" aria-hidden="true" />
+                  <p className="text-sm text-amber-800">
+                    Responses are typically due{' '}
+                    <strong>9 court days after service</strong>:{' '}
+                    <strong>{responseDeadline}</strong>.{' '}
+                    Verify with your court.
+                  </p>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {visibleQuestions.map((question) => (

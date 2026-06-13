@@ -159,6 +159,8 @@ export const motionAPI = {
     return response.data;
   }
 };
+import { evalCondition } from '../utils/conditionEval';
+
 export const intakeAPI = {
   getQuestions: async (formType: string, stepNumber?: number) => {
     // Import form templates dynamically to avoid circular dependencies
@@ -189,28 +191,8 @@ export const intakeAPI = {
     return { success: true };
   },
   evaluateCondition: async (condition: string, context: any) => {
-    // Simple condition evaluation for common patterns
     try {
-      // Handle basic equality checks like 'has_children == "Yes"'
-      if (condition.includes('==')) {
-        const [field, value] = condition.split('==').map(s => s.trim().replace(/['"]/g, ''));
-        return { data: { result: context[field] === value } };
-      }
-
-      // Handle property existence checks like 'order_types.Other'
-      if (condition.includes('.')) {
-        const [field, property] = condition.split('.');
-        return { data: { result: context[field] && context[field][property] } };
-      }
-
-      // Handle greater than checks like 'other_income > 0'
-      if (condition.includes('>')) {
-        const [field, value] = condition.split('>').map(s => s.trim());
-        return { data: { result: Number(context[field]) > Number(value) } };
-      }
-
-      // Default to showing the question if we can't evaluate
-      return { data: { result: true } };
+      return { data: { result: evalCondition(condition, context) } };
     } catch (error) {
       console.error('Error evaluating condition:', condition, error);
       return { data: { result: true } };
@@ -246,5 +228,41 @@ export const profileAPI = {
   updateProfile: profile.update
 };
 export const authAPI = auth;
+
+// Violation intake & filing endpoints
+export interface ViolationIntakePayload {
+  violationType: string;
+  urgency: boolean;
+  violationDates: string[];
+  violationDescription: string;
+  evidence: string[];
+  attemptedResolution: boolean;
+  resolutionDescription?: string;
+  priorViolations: boolean;
+  priorViolationsDescription?: string;
+  requestedRelief: string[];
+}
+
+export const violationAPI = {
+  getIntakeQuestions: async () => {
+    const response = await api.get('/violations/intake-questions');
+    return response.data;
+  },
+
+  getTracks: async () => {
+    const response = await api.get('/violations/tracks');
+    return response.data;
+  },
+
+  process: async (payload: ViolationIntakePayload) => {
+    const response = await api.post('/violations/process', payload);
+    return response.data;
+  },
+
+  generateDeclaration: async (payload: ViolationIntakePayload) => {
+    const response = await api.post('/violations/generate-declaration', payload);
+    return response.data;
+  },
+};
 
 export default api;

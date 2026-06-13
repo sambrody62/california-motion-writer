@@ -92,6 +92,19 @@ const FL_300_TEMPLATE: FormTemplate = {
       description: 'Select the types of orders you are requesting from the court',
       questions: [
         {
+          id: 'case_type',
+          type: 'radio',
+          label: 'What best describes your case?',
+          required: true,
+          options: [
+            'Custody and visitation only',
+            'Support only',
+            'Custody, visitation, and support',
+            'Other family law matter'
+          ],
+          help_text: 'This helps determine which questions are relevant to your situation. You choose what to request.'
+        },
+        {
           id: 'order_types',
           type: 'checkbox',
           label: 'What orders are you requesting?',
@@ -144,7 +157,7 @@ const FL_300_TEMPLATE: FormTemplate = {
           type: 'textarea',
           label: 'Current Custody Arrangement',
           required: false,
-          condition: 'has_children == "Yes"',
+          condition: 'case_type != "Support only" && has_children == "Yes"',
           placeholder: 'Describe who the children currently live with and any existing custody orders',
           help_text: 'Include any temporary orders or informal arrangements currently in place'
         },
@@ -153,7 +166,7 @@ const FL_300_TEMPLATE: FormTemplate = {
           type: 'textarea',
           label: 'Requested Custody Arrangement',
           required: true,
-          condition: 'has_children == "Yes"',
+          condition: 'case_type != "Support only" && has_children == "Yes"',
           placeholder: 'Describe the custody and visitation schedule you are requesting',
           help_text: 'Be specific about days, times, holidays, and vacation schedules'
         }
@@ -280,16 +293,16 @@ const FL_300_TEMPLATE: FormTemplate = {
   ]
 };
 
-// FL-320: Response to Request for Order
+// FL-320: Response to Request for Order (3-screen flow)
 const FL_320_TEMPLATE: FormTemplate = {
   form_type: FORM_TYPES.FL_320,
   title: 'Response to Request for Order (FL-320)',
-  total_steps: 4,
+  total_steps: 3,
   steps: [
     {
       step_number: 1,
-      step_name: 'Case Information',
-      description: 'Confirm the case information from the original request',
+      step_name: 'Case Information & Service',
+      description: 'Confirm the case information from the Request for Order you received',
       questions: [
         {
           id: 'case_number',
@@ -319,252 +332,167 @@ const FL_320_TEMPLATE: FormTemplate = {
           label: 'Scheduled Hearing Time',
           required: true,
           help_text: 'Enter the hearing time from the Request for Order'
+        },
+        {
+          id: 'date_served',
+          type: 'date',
+          label: 'Date You Were Served',
+          required: true,
+          help_text: 'The date you personally received or were served with the Request for Order'
         }
       ]
     },
     {
       step_number: 2,
       step_name: 'Response to Requests',
-      description: 'Respond to each request made by the other party',
+      description: 'Describe what the other party requested and your position on each item',
       questions: [
         {
-          id: 'agree_child_custody',
-          type: 'radio',
-          label: 'Do you agree with the requested child custody arrangement?',
-          required: true,
-          options: ['Agree', 'Disagree', 'Not applicable'],
-          help_text: 'Select your position on the custody request'
-        },
-        {
-          id: 'custody_counterproposal',
+          id: 'other_party_requests',
           type: 'textarea',
-          label: 'Your Custody Proposal',
+          label: 'What did the other party request?',
           required: true,
-          condition: 'agree_child_custody == "Disagree"',
-          placeholder: 'Describe the custody arrangement you believe is appropriate...',
-          help_text: 'Provide specific details about your proposed custody and visitation schedule'
+          placeholder: 'Summarize the orders the other party is asking the court to make...',
+          help_text: 'You can find this information in the Request for Order (FL-300) you received'
         },
         {
-          id: 'agree_child_support',
+          id: 'agree_with_requests',
           type: 'radio',
-          label: 'Do you agree with the requested child support?',
+          label: 'Do you agree with what the other party is requesting?',
           required: true,
-          options: ['Agree', 'Disagree', 'Not applicable'],
-          help_text: 'Select your position on the child support request'
+          options: ['Yes, I agree', 'No, I disagree', 'I partially agree']
         },
         {
-          id: 'support_counterproposal',
-          type: 'currency',
-          label: 'Your Proposed Child Support Amount',
+          id: 'disagreement_details',
+          type: 'textarea',
+          label: 'What do you disagree with?',
           required: true,
-          condition: 'agree_child_support == "Disagree"',
-          help_text: 'Enter the monthly child support amount you believe is appropriate'
-        },
-        {
-          id: 'agree_spousal_support',
-          type: 'radio',
-          label: 'Do you agree with the requested spousal support?',
-          required: true,
-          options: ['Agree', 'Disagree', 'Not applicable'],
-          help_text: 'Select your position on the spousal support request'
+          condition: 'agree_with_requests == "No, I disagree" || agree_with_requests == "I partially agree"',
+          placeholder: 'Describe specifically what you disagree with and why...',
+          help_text: 'Be factual and specific. Include dates and relevant circumstances.'
         }
       ]
     },
     {
       step_number: 3,
-      step_name: 'Your Counter-Requests',
-      description: 'Make any additional requests you want the court to consider',
+      step_name: 'Your Requests & Additional Information',
+      description: 'State what you would like the court to order and provide any additional information',
       questions: [
         {
-          id: 'has_counter_requests',
+          id: 'your_requested_orders',
+          type: 'textarea',
+          label: 'What orders would you like the court to make instead?',
+          required: false,
+          placeholder: 'Describe the specific orders you are asking the court to make...',
+          help_text: 'If you agree with everything, you may leave this blank. Be specific about dates, amounts, and schedules.'
+        },
+        {
+          id: 'supporting_facts',
+          type: 'textarea',
+          label: 'Additional facts supporting your position',
+          required: false,
+          placeholder: 'Include any other relevant facts, dates, or circumstances the court should know...',
+          help_text: 'Focus on factual information. Avoid emotional language.'
+        },
+        {
+          id: 'requests_attorney_fees',
           type: 'radio',
-          label: 'Do you have additional requests for the court?',
+          label: 'Are you requesting that the other party pay your attorney fees or costs?',
           required: true,
           options: ['Yes', 'No'],
-          help_text: 'Do you want to ask the court for orders beyond responding to the original request?'
-        },
-        {
-          id: 'counter_request_types',
-          type: 'checkbox',
-          label: 'What additional orders are you requesting?',
-          required: true,
-          condition: 'has_counter_requests == "Yes"',
-          options: [
-            'Different child custody arrangement',
-            'Different child support amount',
-            'Spousal support',
-            'Attorney fees and costs',
-            'Property orders',
-            'Other'
-          ]
-        },
-        {
-          id: 'counter_request_details',
-          type: 'textarea',
-          label: 'Details of Your Additional Requests',
-          required: true,
-          condition: 'has_counter_requests == "Yes"',
-          placeholder: 'Describe the specific orders you are requesting...',
-          help_text: 'Be specific about what you want the court to order'
-        }
-      ]
-    },
-    {
-      step_number: 4,
-      step_name: 'Supporting Facts',
-      description: 'Provide facts that support your response and any counter-requests',
-      questions: [
-        {
-          id: 'response_facts',
-          type: 'textarea',
-          label: 'Facts Supporting Your Response',
-          required: true,
-          placeholder: 'Explain the factual basis for your agreement or disagreement with the original requests...',
-          help_text: 'Provide clear, factual information that supports your position'
-        },
-        {
-          id: 'best_interest_response',
-          type: 'textarea',
-          label: 'Why Your Position is in the Children\'s Best Interest',
-          required: true,
-          placeholder: 'Explain how your proposed arrangements will benefit the children...',
-          help_text: 'Focus on the children\'s safety, stability, and well-being'
-        },
-        {
-          id: 'financial_information',
-          type: 'textarea',
-          label: 'Financial Information',
-          required: false,
-          placeholder: 'Provide any relevant financial information...',
-          help_text: 'Include income, expenses, or other financial details relevant to support requests'
+          help_text: 'The court may award fees based on each party\'s financial circumstances'
         }
       ]
     }
   ]
 };
 
-// FL-150: Income and Expense Declaration
+// FL-150: Income and Expense Declaration (3-screen flow)
 const FL_150_TEMPLATE: FormTemplate = {
   form_type: FORM_TYPES.FL_150,
   title: 'Income and Expense Declaration (FL-150)',
-  total_steps: 5,
+  total_steps: 3,
   steps: [
     {
       step_number: 1,
-      step_name: 'Employment and Income',
-      description: 'Provide detailed information about your employment and income sources',
+      step_name: 'Income Source',
+      description: 'Provide information about your primary income source and any other income',
       questions: [
         {
-          id: 'employer_name',
+          id: 'income_source',
+          type: 'radio',
+          label: 'Primary income source',
+          required: true,
+          options: [
+            'W-2 employee',
+            'Self-employed',
+            'Fixed income (pension/SSI/disability)',
+            'Other'
+          ],
+          help_text: 'Select the category that best describes your main source of income'
+        },
+        {
+          id: 'gross_monthly_income',
+          type: 'currency',
+          label: 'Gross Monthly Income',
+          required: true,
+          condition: 'income_source == "W-2 employee"',
+          help_text: 'Your total monthly income before taxes and deductions (from pay stubs)'
+        },
+        {
+          id: 'last_year_net_income',
+          type: 'currency',
+          label: 'Last Year Net Income (self-employment)',
+          required: true,
+          condition: 'income_source == "Self-employed"',
+          help_text: 'Your net profit from self-employment or business last calendar year (from Schedule C or tax return)'
+        },
+        {
+          id: 'fixed_monthly_income',
+          type: 'currency',
+          label: 'Monthly Fixed Income Amount',
+          required: true,
+          condition: 'income_source == "Fixed income (pension/SSI/disability)"',
+          help_text: 'Total monthly amount received from pension, SSI, disability, or other fixed source'
+        },
+        {
+          id: 'other_income_description',
           type: 'text',
-          label: 'Employer Name',
+          label: 'Describe your income source',
           required: true,
-          placeholder: 'ABC Company Inc.'
+          condition: 'income_source == "Other"',
+          placeholder: 'e.g., rental income, freelance, investments...',
+          help_text: 'Describe where your income comes from'
         },
         {
-          id: 'employer_address',
-          type: 'textarea',
-          label: 'Employer Address',
+          id: 'other_income_amount',
+          type: 'currency',
+          label: 'Monthly Income Amount',
           required: true,
-          placeholder: '123 Main St, City, State 12345'
+          condition: 'income_source == "Other"',
+          help_text: 'Average monthly amount from the income source described above'
         },
         {
-          id: 'job_title',
+          id: 'additional_income',
+          type: 'currency',
+          label: 'Other monthly income (rental, investments, unemployment, etc.)',
+          required: false,
+          help_text: 'Any other regular monthly income not included above. Enter 0 if none.'
+        },
+        {
+          id: 'additional_income_description',
           type: 'text',
-          label: 'Job Title/Position',
-          required: true,
-          placeholder: 'Software Engineer'
-        },
-        {
-          id: 'employment_start_date',
-          type: 'date',
-          label: 'Employment Start Date',
-          required: true
-        },
-        {
-          id: 'gross_monthly_salary',
-          type: 'currency',
-          label: 'Gross Monthly Salary',
-          required: true,
-          help_text: 'Before taxes and deductions'
-        },
-        {
-          id: 'overtime_income',
-          type: 'currency',
-          label: 'Average Monthly Overtime',
+          label: 'Describe other monthly income',
           required: false,
-          help_text: 'Average overtime pay per month'
-        },
-        {
-          id: 'bonus_income',
-          type: 'currency',
-          label: 'Annual Bonus (divided by 12)',
-          required: false,
-          help_text: 'If you receive annual bonuses, divide by 12 for monthly amount'
+          condition: 'additional_income > 0',
+          placeholder: 'Describe the source of this additional income'
         }
       ]
     },
     {
       step_number: 2,
-      step_name: 'Other Income Sources',
-      description: 'List all other sources of income',
-      questions: [
-        {
-          id: 'self_employment_income',
-          type: 'currency',
-          label: 'Self-Employment Income',
-          required: false,
-          help_text: 'Monthly net income from self-employment or business'
-        },
-        {
-          id: 'rental_income',
-          type: 'currency',
-          label: 'Rental Property Income',
-          required: false,
-          help_text: 'Monthly net income from rental properties'
-        },
-        {
-          id: 'investment_income',
-          type: 'currency',
-          label: 'Investment Income',
-          required: false,
-          help_text: 'Monthly income from investments, dividends, interest'
-        },
-        {
-          id: 'unemployment_benefits',
-          type: 'currency',
-          label: 'Unemployment Benefits',
-          required: false,
-          help_text: 'Monthly unemployment compensation'
-        },
-        {
-          id: 'social_security',
-          type: 'currency',
-          label: 'Social Security Benefits',
-          required: false,
-          help_text: 'Monthly Social Security payments'
-        },
-        {
-          id: 'other_income',
-          type: 'currency',
-          label: 'Other Income',
-          required: false,
-          help_text: 'Any other regular monthly income'
-        },
-        {
-          id: 'other_income_description',
-          type: 'text',
-          label: 'Describe Other Income',
-          required: false,
-          condition: 'other_income > 0',
-          placeholder: 'Describe the source of other income'
-        }
-      ]
-    },
-    {
-      step_number: 3,
       step_name: 'Monthly Expenses',
-      description: 'List your average monthly living expenses',
+      description: 'List your average monthly expenses and indicate whether you support other children',
       questions: [
         {
           id: 'housing_payment',
@@ -574,25 +502,11 @@ const FL_150_TEMPLATE: FormTemplate = {
           help_text: 'Monthly rent or mortgage payment'
         },
         {
-          id: 'property_taxes',
-          type: 'currency',
-          label: 'Property Taxes',
-          required: false,
-          help_text: 'Monthly property tax payment'
-        },
-        {
-          id: 'homeowners_insurance',
-          type: 'currency',
-          label: 'Homeowner\'s/Renter\'s Insurance',
-          required: false,
-          help_text: 'Monthly insurance payment'
-        },
-        {
           id: 'utilities',
           type: 'currency',
           label: 'Utilities',
           required: true,
-          help_text: 'Gas, electric, water, trash, etc.'
+          help_text: 'Gas, electric, water, trash, internet, etc.'
         },
         {
           id: 'food_household',
@@ -602,120 +516,96 @@ const FL_150_TEMPLATE: FormTemplate = {
           help_text: 'Groceries and household items'
         },
         {
-          id: 'childcare',
+          id: 'transportation',
           type: 'currency',
-          label: 'Childcare',
-          required: false,
-          help_text: 'Daycare, babysitting, after-school care'
+          label: 'Transportation',
+          required: true,
+          help_text: 'Car payment, gas, maintenance, public transit'
         },
         {
           id: 'health_insurance',
           type: 'currency',
           label: 'Health Insurance',
           required: false,
-          help_text: 'Monthly health insurance premiums'
+          help_text: 'Monthly health insurance premiums (your share)'
         },
         {
-          id: 'transportation',
+          id: 'childcare',
           type: 'currency',
-          label: 'Transportation',
-          required: true,
-          help_text: 'Car payment, gas, maintenance, public transit'
-        }
-      ]
-    },
-    {
-      step_number: 4,
-      step_name: 'Assets and Debts',
-      description: 'List your major assets and debts',
-      questions: [
-        {
-          id: 'checking_savings',
-          type: 'currency',
-          label: 'Cash in Checking/Savings',
-          required: true,
-          help_text: 'Total cash in all bank accounts'
-        },
-        {
-          id: 'home_value',
-          type: 'currency',
-          label: 'Home Fair Market Value',
+          label: 'Childcare',
           required: false,
-          help_text: 'Current fair market value of your home'
+          help_text: 'Daycare, babysitting, after-school care for children in this case'
         },
         {
-          id: 'mortgage_balance',
+          id: 'other_monthly_expenses',
           type: 'currency',
-          label: 'Mortgage Balance',
+          label: 'Other monthly expenses',
           required: false,
-          help_text: 'Current balance owed on mortgage'
+          help_text: 'Any other significant monthly expenses not listed above'
         },
         {
-          id: 'vehicle_value',
-          type: 'currency',
-          label: 'Vehicle Value',
-          required: false,
-          help_text: 'Fair market value of vehicles owned'
-        },
-        {
-          id: 'vehicle_loans',
-          type: 'currency',
-          label: 'Vehicle Loan Balance',
-          required: false,
-          help_text: 'Amount owed on vehicle loans'
-        },
-        {
-          id: 'credit_card_debt',
-          type: 'currency',
-          label: 'Credit Card Debt',
-          required: false,
-          help_text: 'Total balance on all credit cards'
-        },
-        {
-          id: 'retirement_accounts',
-          type: 'currency',
-          label: 'Retirement Accounts',
-          required: false,
-          help_text: '401k, IRA, pension values'
-        }
-      ]
-    },
-    {
-      step_number: 5,
-      step_name: 'Additional Information',
-      description: 'Provide any additional relevant financial information',
-      questions: [
-        {
-          id: 'income_change_expected',
+          id: 'supports_other_children',
           type: 'radio',
-          label: 'Do you expect your income to change?',
+          label: 'Do you support other children not in this case?',
+          required: true,
+          options: ['Yes', 'No'],
+          help_text: 'Children from another relationship who are not part of this court case'
+        },
+        {
+          id: 'other_children_count',
+          type: 'number',
+          label: 'Number of other children you support',
+          required: true,
+          condition: 'supports_other_children == "Yes"',
+          validation: { min: 1, message: 'Enter a number greater than 0' }
+        },
+        {
+          id: 'other_children_support_amount',
+          type: 'currency',
+          label: 'Monthly support amount for other children (total)',
+          required: true,
+          condition: 'supports_other_children == "Yes"',
+          help_text: 'Total monthly amount you pay to support all other children not in this case'
+        }
+      ]
+    },
+    {
+      step_number: 3,
+      step_name: 'Assets',
+      description: 'Provide information about your assets',
+      questions: [
+        {
+          id: 'has_assets',
+          type: 'radio',
+          label: 'Do you have significant assets (bank accounts, property, retirement accounts, etc.)?',
+          required: true,
+          options: ['Yes', 'No'],
+          help_text: 'Assets include cash, real estate, vehicles, investments, and retirement accounts'
+        },
+        {
+          id: 'assets_description',
+          type: 'textarea',
+          label: 'Describe your assets and estimated values',
+          required: true,
+          condition: 'has_assets == "Yes"',
+          placeholder: 'Example: Checking account ~$2,000; 2018 Honda Civic ~$12,000; 401k ~$45,000...',
+          help_text: 'List each significant asset and its approximate current value. Approximate values are acceptable.'
+        },
+        {
+          id: 'has_significant_debts',
+          type: 'radio',
+          label: 'Do you have significant debts (mortgage, loans, credit cards, etc.)?',
           required: true,
           options: ['Yes', 'No']
         },
         {
-          id: 'income_change_details',
+          id: 'debts_description',
           type: 'textarea',
-          label: 'Explain Expected Income Change',
+          label: 'Describe your debts and amounts owed',
           required: true,
-          condition: 'income_change_expected == "Yes"',
-          placeholder: 'Describe the expected change and when it will occur...',
-          help_text: 'Include details about promotions, job loss, retirement, etc.'
-        },
-        {
-          id: 'hardship_circumstances',
-          type: 'textarea',
-          label: 'Unusual Circumstances',
-          required: false,
-          placeholder: 'Describe any unusual financial circumstances...',
-          help_text: 'Medical expenses, special needs, etc.'
-        },
-        {
-          id: 'attachment_needed',
-          type: 'radio',
-          label: 'Are you attaching additional documentation?',
-          required: true,
-          options: ['Yes', 'No'],
-          help_text: 'Pay stubs, tax returns, bank statements, etc.'
+          condition: 'has_significant_debts == "Yes"',
+          placeholder: 'Example: Mortgage balance ~$280,000; Car loan ~$8,000; Credit cards ~$3,500...',
+          help_text: 'List each significant debt and the approximate balance remaining'
         }
       ]
     }

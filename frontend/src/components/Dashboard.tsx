@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motionAPI, profileAPI } from '../services/api';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import {
@@ -9,7 +9,9 @@ import {
   UserIcon,
   ChatBubbleBottomCenterTextIcon,
   SparklesIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ShieldExclamationIcon,
+  ScaleIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 
@@ -168,6 +170,40 @@ export const Dashboard: React.FC = () => {
             Start Your Case
             <ArrowRightIcon className="h-5 w-5 ml-2" />
           </button>
+
+          <div className="mt-6">
+            <Link
+              to="/emergency"
+              aria-label="Need emergency protection?"
+              className="inline-flex items-center text-sm text-red-600 hover:text-red-800 font-medium underline"
+            >
+              <ShieldExclamationIcon className="h-4 w-4 mr-1" />
+              Need emergency protection?
+            </Link>
+          </div>
+        </div>
+
+        {/* Enforce an existing order */}
+        <div className="mb-8">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3">
+              <ScaleIcon className="h-6 w-6 text-indigo-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Enforce an existing order</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  If the other party is not following a court order, you may have options to enforce it.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/violation/intake')}
+              aria-label="Enforce an existing order"
+              className="inline-flex items-center px-4 py-2 border border-indigo-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-shrink-0"
+            >
+              Get started
+              <ArrowRightIcon className="h-4 w-4 ml-2" />
+            </button>
+          </div>
         </div>
 
         {/* How It Works */}

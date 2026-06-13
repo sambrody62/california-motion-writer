@@ -30,6 +30,7 @@ from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
 from app.core.config import settings
 from app.services.pdf_service import pdf_service
+from app.services.pdf_packet_service import generate_packet
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -192,27 +193,6 @@ async def generate_pdf_sync(
                 detail="No draft sections found for this motion"
             )
         
-        # Prepare data for PDF generation
-        profile_data = {
-            "is_petitioner": profile.is_petitioner,
-            "county": profile.county,
-            "case_number": profile.case_number,
-            "party_name": profile.party_name,
-            "other_party_name": profile.other_party_name,
-            "party_address": profile.party_address,
-            "party_phone": profile.party_phone,
-            "other_party_attorney": profile.other_party_attorney,
-            "children_info": profile.children_info or []
-        }
-        
-        motion_data = {
-            "motion_type": motion.motion_type,
-            "case_caption": motion.case_caption,
-            "filing_date": motion.filing_date,
-            "hearing_date": motion.hearing_date,
-            "hearing_time": motion.hearing_time
-        }
-        
         llm_sections = [
             {
                 "step_number": draft.step_number,
@@ -222,19 +202,18 @@ async def generate_pdf_sync(
             }
             for draft in drafts
         ]
-        
-        # Generate PDF
-        pdf_bytes = await pdf_service.generate_motion_pdf(
-            motion_type=motion.motion_type,
-            motion_data=motion_data,
-            profile_data=profile_data,
-            llm_sections=llm_sections
-        )
-        
+
+        # Generate PDF packet (primary form + MC-030 declaration + FL-150 if support issue)
+        pdf_bytes = await generate_packet(motion, profile, llm_sections)
+
+        # Determine primary document type for record-keeping
+        _mt_raw = motion.motion_type.value if hasattr(motion.motion_type, "value") else str(motion.motion_type)
+        primary_form = "FL-300" if _mt_raw.lower() in {"rfo", "violation", "fl-300"} else "FL-320"
+
         # Create document record
         document = Document(
             motion_id=motion.id,
-            document_type="FL-300" if motion.motion_type == "RFO" else "FL-320",
+            document_type=primary_form,
             filename=f"{profile.case_number or 'DRAFT'}_{motion.motion_type}_{datetime.now().strftime('%Y%m%d')}.pdf",
             file_size_bytes=len(pdf_bytes),
             generation_method="automated",

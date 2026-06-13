@@ -144,10 +144,154 @@ async def test_fl150_contains_party_names_and_case_number(svc):
 
 
 # ---------------------------------------------------------------------------
-# Packet / multi-form support note
+# Packet / multi-form tests (generate_packet)
 # ---------------------------------------------------------------------------
-# pdf_service.generate_motion_pdf does NOT assemble a multi-form packet.
-# It generates only the primary form (FL-300 for RFO, FL-320 for Response).
-# There is no automatic inclusion of FL-150 when has_support_issue is True.
-# BLOCKER: pdf_service needs a generate_packet() method (or caller logic) that
-# adds FL-150 to the output when intake_data.has_support_issue is set.
+
+from app.services.pdf_packet_service import generate_packet
+
+
+def _make_motion_stub(motion_type: str, has_support_issue: bool = False):
+    """Minimal motion-like dict used by generate_packet tests."""
+    class _M:
+        pass
+    m = _M()
+    m.motion_type = motion_type
+    m.intake_data = {"has_support_issue": has_support_issue} if has_support_issue else {}
+    m.hearing_date = "2024-06-15"
+    m.hearing_time = "9:00 AM"
+    m.case_caption = "Smith v. Smith"
+    m.filing_date = None
+    return m
+
+
+def _make_profile_stub(party_name="John Smith", other="Jane Smith", case_number="FL-2024-001"):
+    class _P:
+        pass
+    p = _P()
+    p.party_name = party_name
+    p.other_party_name = other
+    p.case_number = case_number
+    p.county = "San Diego"
+    p.is_petitioner = True
+    p.party_address = "123 Main St"
+    p.party_phone = "619-555-0100"
+    p.other_party_attorney = None
+    p.children_info = []
+    return p
+
+
+def _make_llm_sections(text="Petitioner John Smith states facts."):
+    return [
+        {
+            "step_number": 1,
+            "section": "Facts and Declaration",
+            "original_answers": {"relief_categories": ["custody"]},
+            "rewritten_text": text,
+        }
+    ]
+
+
+# --- RFO + support issue → FL-300 + MC-030 + FL-150 packet ---
+
+@pytest.mark.asyncio
+async def test_packet_rfo_support_issue_contains_fl300_and_fl150():
+    """RFO with has_support_issue=True must produce a packet larger than FL-300 alone."""
+    motion = _make_motion_stub("RFO", has_support_issue=True)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections()
+
+    svc = PDFService()
+    single_pdf = await svc.generate_motion_pdf("RFO", {"hearing_date": "2024-06-15"}, {
+        "party_name": "John Smith", "other_party_name": "Jane Smith",
+        "case_number": "FL-2024-001", "county": "San Diego", "is_petitioner": True
+    }, llm_sections)
+
+    packet = await generate_packet(motion, profile, llm_sections)
+
+    assert packet[:4] == b"%PDF", "Packet must start with %PDF"
+    assert len(packet) > len(single_pdf), (
+        f"Packet ({len(packet)} bytes) must be larger than single FL-300 ({len(single_pdf)} bytes)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_packet_rfo_support_issue_party_names_in_all_forms():
+    """Party names and case number must appear in the merged packet text."""
+    motion = _make_motion_stub("RFO", has_support_issue=True)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections()
+
+    packet = await generate_packet(motion, profile, llm_sections)
+    text = _extract_text(packet)
+
+    assert "John Smith" in text, "Petitioner name must appear in packet"
+    assert "Jane Smith" in text, "Respondent name must appear in packet"
+    assert "FL-2024-001" in text, "Case number must appear in packet"
+
+
+# --- RFO without support issue → FL-300 + MC-030 (no FL-150) ---
+
+@pytest.mark.asyncio
+async def test_packet_rfo_no_support_issue_excludes_fl150():
+    """RFO without has_support_issue must not include FL-150 pages."""
+    motion = _make_motion_stub("RFO", has_support_issue=False)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections()
+
+    motion_support = _make_motion_stub("RFO", has_support_issue=True)
+    packet_no_support = await generate_packet(motion, profile, llm_sections)
+    packet_with_support = await generate_packet(motion_support, profile, llm_sections)
+
+    reader_no = PyPDF2.PdfReader(io.BytesIO(packet_no_support))
+    reader_with = PyPDF2.PdfReader(io.BytesIO(packet_with_support))
+
+    assert len(reader_no.pages) < len(reader_with.pages), (
+        "Packet without support issue must have fewer pages than one with FL-150"
+    )
+
+
+# --- RESPONSE motion → FL-320 packet ---
+
+@pytest.mark.asyncio
+async def test_packet_response_produces_fl320():
+    """RESPONSE motion must use FL-320 as the primary form."""
+    motion = _make_motion_stub("RESPONSE", has_support_issue=False)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections("Respondent Jane Smith agrees in part.")
+
+    packet = await generate_packet(motion, profile, llm_sections)
+
+    assert packet[:4] == b"%PDF", "Packet must start with %PDF"
+    assert len(packet) > 10_240, f"Expected >10 KB, got {len(packet)} bytes"
+    text = _extract_text(packet)
+    assert "Jane Smith" in text, "Respondent name must appear in RESPONSE packet"
+
+
+@pytest.mark.asyncio
+async def test_packet_response_party_names_extractable():
+    """Party names must be extractable from every included form in RESPONSE packet."""
+    motion = _make_motion_stub("RESPONSE", has_support_issue=False)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections()
+
+    packet = await generate_packet(motion, profile, llm_sections)
+    text = _extract_text(packet)
+
+    assert "John Smith" in text
+    assert "Jane Smith" in text
+    assert "FL-2024-001" in text
+
+
+# --- Violation type uses FL-300 ---
+
+@pytest.mark.asyncio
+async def test_packet_violation_uses_fl300():
+    """Violation motion type must use FL-300 as its primary form."""
+    motion = _make_motion_stub("violation", has_support_issue=False)
+    profile = _make_profile_stub()
+    llm_sections = _make_llm_sections()
+
+    packet = await generate_packet(motion, profile, llm_sections)
+
+    assert packet[:4] == b"%PDF"
+    assert len(packet) > 10_240

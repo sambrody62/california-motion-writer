@@ -375,4 +375,33 @@ describe('Dashboard', () => {
       expect(startButtons.length).toBeGreaterThan(0);
     });
   });
+
+  test('displays emergency protection link to /emergency', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      const emergencyLink = screen.getByRole('link', { name: /Need emergency protection\?/i });
+      expect(emergencyLink).toBeInTheDocument();
+      expect(emergencyLink).toHaveAttribute('href', '/emergency');
+    });
+  });
+
+  test('displays enforce existing order card', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Enforce an existing order/i)).toBeInTheDocument();
+    });
+  });
+
+  test('enforce existing order card links to /violation/intake', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      const enforceButton = screen.getByRole('button', { name: /Enforce an existing order/i });
+      fireEvent.click(enforceButton);
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/violation/intake');
+  });
 });

@@ -296,3 +296,135 @@ class TestDocumentDownload:
         fake_id = str(uuid.uuid4())
         response = await client.get(f"/api/v1/documents/{fake_id}/download")
         assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# generate-pdf-sync uses generate_packet (multi-form packet support)
+# ---------------------------------------------------------------------------
+
+class TestGeneratePdfSyncUsesPacket:
+    """generate-pdf-sync must delegate to generate_packet, not single-form generation."""
+
+    @pytest.mark.asyncio
+    async def test_sync_endpoint_calls_generate_packet(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """generate-pdf-sync calls generate_packet and returns PDF bytes."""
+        fake_pdf = b"%PDF-1.4 packet pdf for testing"
+
+        motion_resp = await client.post(
+            "/api/v1/motions",
+            json={
+                "motion_type": "RFO",
+                "title": "Packet Test RFO",
+                "description": "Custody modification",
+                "case_caption": "Packet v. Packet",
+                "filing_track": "standard",
+                "courthouse": "SD Superior",
+                "intake_data": {}
+            },
+            headers=auth_headers
+        )
+        assert motion_resp.status_code == 201, motion_resp.text
+        motion_id = motion_resp.json()["id"]
+
+        await client.post(
+            "/api/v1/profiles",
+            json={
+                "case_number": "FL-2024-PKT",
+                "county": "San Diego",
+                "party_name": "Packet User",
+                "other_party_name": "Other Packet",
+                "is_petitioner": True
+            },
+            headers=auth_headers
+        )
+
+        draft_resp = await client.post(
+            f"/api/v1/motions/{motion_id}/drafts",
+            json={
+                "step_number": 1,
+                "step_name": "relief_requested",
+                "question_data": {"relief": "custody modification"}
+            },
+            headers=auth_headers
+        )
+        assert draft_resp.status_code in (200, 201), draft_resp.text
+
+        with patch(
+            "app.api.v1.endpoints.documents.generate_packet",
+            new=AsyncMock(return_value=fake_pdf)
+        ):
+            resp = await client.post(
+                "/api/v1/documents/generate-pdf-sync",
+                json={"motion_id": motion_id},
+                headers=auth_headers
+            )
+
+        assert resp.status_code == 200, resp.text
+        assert resp.headers["content-type"] == "application/pdf"
+        assert resp.content == fake_pdf
+
+    @pytest.mark.asyncio
+    async def test_sync_endpoint_support_issue_passes_motion_to_packet(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """generate-pdf-sync passes the motion ORM object to generate_packet."""
+        fake_pdf = b"%PDF-1.4 support packet"
+        captured: dict = {}
+
+        async def _mock_packet(motion, profile, llm_sections):
+            captured["motion"] = motion
+            captured["intake_data"] = getattr(motion, "intake_data", {})
+            return fake_pdf
+
+        motion_resp = await client.post(
+            "/api/v1/motions",
+            json={
+                "motion_type": "RFO",
+                "title": "Support Packet Test",
+                "description": "Support issue",
+                "case_caption": "Support v. Support",
+                "filing_track": "standard",
+                "courthouse": "SD Superior",
+                "intake_data": {"has_support_issue": True}
+            },
+            headers=auth_headers
+        )
+        assert motion_resp.status_code == 201, motion_resp.text
+        motion_id = motion_resp.json()["id"]
+
+        await client.post(
+            "/api/v1/profiles",
+            json={
+                "case_number": "FL-2024-SUP",
+                "county": "San Diego",
+                "party_name": "Support User",
+                "other_party_name": "Other Support",
+                "is_petitioner": True
+            },
+            headers=auth_headers
+        )
+
+        await client.post(
+            f"/api/v1/motions/{motion_id}/drafts",
+            json={
+                "step_number": 1,
+                "step_name": "support_facts",
+                "question_data": {"relief": "child support"}
+            },
+            headers=auth_headers
+        )
+
+        with patch(
+            "app.api.v1.endpoints.documents.generate_packet",
+            new=_mock_packet
+        ):
+            resp = await client.post(
+                "/api/v1/documents/generate-pdf-sync",
+                json={"motion_id": motion_id},
+                headers=auth_headers
+            )
+
+        assert resp.status_code == 200, resp.text
+        assert "motion" in captured, "generate_packet must be called with motion ORM object"

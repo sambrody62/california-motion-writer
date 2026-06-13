@@ -33,3 +33,6 @@ pydantic-settings==2.1.0
 greenlet==3.0.3
 anthropic==0.109.1
 
+google-auth-oauthlib==1.4.0
+google-api-python-client==2.197.0
+google-cloud-vision==3.14.0

@@ -4,6 +4,7 @@ Tests for evidence storage backend.
 import io
 import pytest
 import pytest_asyncio
+from unittest.mock import MagicMock, patch
 from httpx import AsyncClient
 
 
@@ -307,3 +308,124 @@ async def test_empty_filename_rejected(client: AsyncClient, auth_headers: dict):
 async def test_unauthenticated_returns_401(client: AsyncClient):
     resp = await client.get("/api/v1/evidence/motions/nonexistent/evidence")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# OCR suggestion on image upload (env-gated)
+# ---------------------------------------------------------------------------
+
+PNG_BYTES = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+    b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
+async def test_ocr_suggestion_included_in_upload_response_when_flag_on(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    """With OCR on + mocked vision, image upload response includes suggested_transcription."""
+    monkeypatch.setenv("OCR_ENABLED", "true")
+
+    from app.services import ocr_service
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.full_text_annotation.text = "Mocked OCR text"
+    mock_client.document_text_detection.return_value = mock_response
+
+    motion_id = await _create_motion(client, auth_headers)
+
+    with patch.object(ocr_service, "_VISION_AVAILABLE", True):
+        with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
+            resp = await client.post(
+                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                files={"file": ("screenshot.png", io.BytesIO(PNG_BYTES), "image/png")},
+                data={"evidence_type": "photo", "tags": '["threat"]', "description": "Screenshot"},
+                headers=auth_headers,
+            )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data.get("suggested_transcription") == "Mocked OCR text"
+    # Stored transcription must NOT be auto-set; user_confirmed must remain False
+    assert data["transcription"] is None
+    assert data["user_confirmed"] is False
+
+
+async def test_ocr_stored_transcription_not_set_user_confirmed_false(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    """OCR suggestion never sets stored transcription or user_confirmed=True."""
+    monkeypatch.setenv("OCR_ENABLED", "true")
+
+    from app.services import ocr_service
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.full_text_annotation.text = "Some extracted text"
+    mock_client.document_text_detection.return_value = mock_response
+
+    motion_id = await _create_motion(client, auth_headers)
+
+    with patch.object(ocr_service, "_VISION_AVAILABLE", True):
+        with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
+            resp = await client.post(
+                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                files={"file": ("photo.jpg", io.BytesIO(PNG_BYTES), "image/jpeg")},
+                data={"evidence_type": "photo", "tags": '["other"]', "description": "Photo"},
+                headers=auth_headers,
+            )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["transcription"] is None
+    assert data["user_confirmed"] is False
+
+
+async def test_no_ocr_suggestion_when_flag_off(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    """With OCR flag off, image upload response has no suggested_transcription key (or null)."""
+    monkeypatch.delenv("OCR_ENABLED", raising=False)
+
+    motion_id = await _create_motion(client, auth_headers)
+    resp = await client.post(
+        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        files={"file": ("screenshot.png", io.BytesIO(PNG_BYTES), "image/png")},
+        data={"evidence_type": "photo", "tags": '["threat"]', "description": "Screenshot"},
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    # suggested_transcription must be absent or null when OCR is off
+    assert data.get("suggested_transcription") is None
+
+
+async def test_no_ocr_suggestion_for_non_image_file(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    """OCR is not attempted for non-image uploads (e.g. PDF); no suggested_transcription."""
+    monkeypatch.setenv("OCR_ENABLED", "true")
+
+    from app.services import ocr_service
+
+    mock_client = MagicMock()
+
+    motion_id = await _create_motion(client, auth_headers)
+
+    with patch.object(ocr_service, "_VISION_AVAILABLE", True):
+        with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
+            resp = await client.post(
+                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                files={"file": ("document.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")},
+                data={"evidence_type": "document", "tags": '["other"]', "description": "PDF"},
+                headers=auth_headers,
+            )
+
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data.get("suggested_transcription") is None
+    # Vision client must NOT have been called for a PDF
+    mock_client.document_text_detection.assert_not_called()

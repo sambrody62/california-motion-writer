@@ -17,6 +17,7 @@ from app.models.motion import Motion
 from app.models.user import User
 from app.api.v1.endpoints.auth import get_current_user
 from app.services import evidence_storage_service
+from app.services import ocr_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ router = APIRouter()
 
 VALID_TAGS = frozenset(["threat", "non_payment", "custody_violation", "promise_to_follow", "false_claim", "other"])
 ALLOWED_EXTENSIONS = frozenset(["png", "jpg", "jpeg", "pdf", "txt"])
+IMAGE_EXTENSIONS = frozenset(["png", "jpg", "jpeg"])
 MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
@@ -58,6 +60,8 @@ class EvidenceResponse(BaseModel):
     storage_path: Optional[str]
     user_confirmed: bool
     created_at: str
+    # OCR suggestion — transient, never persisted. None when OCR is off or file is not an image.
+    suggested_transcription: Optional[str] = None
 
     @classmethod
     def from_orm(cls, ev: Evidence) -> "EvidenceResponse":
@@ -200,7 +204,7 @@ async def upload_evidence(
         tags=tag_list,
         source_date=parsed_date,
         description=description,
-        transcription=transcription,
+        transcription=transcription,  # never auto-set from OCR
         filename=clean_name,
         storage_path=storage_path,
     )
@@ -208,7 +212,18 @@ async def upload_evidence(
     await db.commit()
     await db.refresh(ev)
     logger.info("Evidence file uploaded id=%s", ev.id)
-    return EvidenceResponse.from_orm(ev)
+
+    response = EvidenceResponse.from_orm(ev)
+
+    # OCR suggestion — only for images when feature flag is on.
+    # Suggestion is transient: never persisted, user must edit and confirm.
+    if ocr_service.ocr_enabled() and ext in IMAGE_EXTENSIONS:
+        suggested = ocr_service.extract_text(content)
+        if suggested:
+            response.suggested_transcription = suggested
+            logger.info("OCR suggestion generated for evidence id=%s", ev.id)
+
+    return response
 
 
 @router.get("/motions/{motion_id}/evidence", response_model=List[EvidenceResponse])

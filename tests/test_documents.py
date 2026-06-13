@@ -373,7 +373,7 @@ class TestGeneratePdfSyncUsesPacket:
         fake_pdf = b"%PDF-1.4 support packet"
         captured: dict = {}
 
-        async def _mock_packet(motion, profile, llm_sections):
+        async def _mock_packet(motion, profile, llm_sections, evidence=None):
             captured["motion"] = motion
             captured["intake_data"] = getattr(motion, "intake_data", {})
             return fake_pdf

@@ -4,16 +4,22 @@ PDF Packet Service — assembles multi-form PDF packets for California court mot
 Packet composition rules:
   RFO / violation types  → FL-300  [+ MC-030 when llm_sections present] [+ FL-150 when has_support_issue]
   RESPONSE               → FL-320  [+ MC-030 when llm_sections present] [+ FL-150 when has_support_issue]
+  When evidence is provided, confirmed+tagged items are appended as lettered exhibits.
 """
 from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import Any, Dict, List, Protocol, runtime_checkable
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 import PyPDF2
 
 from app.services.pdf_service import PDFService
+from app.services.exhibit_assembly_service import (
+    assign_exhibit_letters,
+    build_exhibit_pages,
+    insert_exhibit_references,
+)
 
 _pdf_svc = PDFService()
 
@@ -179,6 +185,7 @@ async def generate_packet(
     motion: _MotionLike,
     profile: _ProfileLike,
     llm_sections: List[Dict[str, Any]],
+    evidence: Optional[List[Dict[str, Any]]] = None,
 ) -> bytes:
     """Assemble a merged PDF packet for the given motion.
 
@@ -186,10 +193,19 @@ async def generate_packet(
         motion:       ORM Motion object (or duck-typed equivalent).
         profile:      ORM Profile object (or duck-typed equivalent).
         llm_sections: List of section dicts with 'rewritten_text' and 'original_answers'.
+        evidence:     Optional list of evidence dicts (shared shape). Only items with
+                      user_confirmed=True and at least one tag will be included as exhibits.
 
     Returns:
         Merged PDF as bytes.
     """
+    # Filter evidence to confirmed+tagged items only.
+    eligible = [
+        e for e in (evidence or [])
+        if e.get("user_confirmed") and e.get("tags")
+    ]
+    lettered = assign_exhibit_letters(eligible) if eligible else []
+
     # 1. Primary form
     primary_form = _primary_form(motion.motion_type)
     primary_bytes = await _pdf_svc.fill_form(primary_form, {
@@ -210,6 +226,8 @@ async def generate_packet(
         declaration_text = "\n\n".join(
             s["rewritten_text"] for s in llm_sections if s.get("rewritten_text", "").strip()
         )
+        if lettered:
+            declaration_text = insert_exhibit_references(declaration_text, lettered)
         mc030_bytes = await _fill_mc030(profile, declaration_text)
         parts.append(mc030_bytes)
 
@@ -218,5 +236,10 @@ async def generate_packet(
     if intake.get("has_support_issue"):
         fl150_bytes = await _fill_fl150(profile)
         parts.append(fl150_bytes)
+
+    # 4. Exhibit pages appended last
+    if lettered:
+        exhibit_bytes = build_exhibit_pages(lettered)
+        parts.append(exhibit_bytes)
 
     return _merge_pdfs(parts)

@@ -265,4 +265,60 @@ export const violationAPI = {
   },
 };
 
+// Evidence endpoints
+export const evidenceAPI = {
+  list: async (motionId: string) => {
+    const response = await api.get(`/motions/${motionId}/evidence`);
+    return response.data;
+  },
+
+  create: async (motionId: string, payload: {
+    evidence_type: 'text' | 'email' | 'photo' | 'document';
+    tags: string[];
+    source_date: string | null;
+    description: string;
+    transcription: string | null;
+    user_confirmed: boolean;
+  }) => {
+    const response = await api.post(`/motions/${motionId}/evidence`, payload);
+    return response.data;
+  },
+
+  upload: async (motionId: string, file: File, fields: {
+    evidence_type: 'photo' | 'document';
+    tags: string[];
+    source_date: string | null;
+    description: string;
+    transcription: string;
+    user_confirmed: boolean;
+  }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    Object.entries(fields).forEach(([key, value]) => {
+      formData.append(key, Array.isArray(value) ? JSON.stringify(value) : String(value));
+    });
+    const response = await api.post(`/motions/${motionId}/evidence/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  update: async (id: string, payload: Partial<{
+    evidence_type: 'text' | 'email' | 'photo' | 'document';
+    tags: string[];
+    source_date: string | null;
+    description: string;
+    transcription: string | null;
+    user_confirmed: boolean;
+  }>) => {
+    const response = await api.put(`/evidence/${id}`, payload);
+    return response.data;
+  },
+
+  remove: async (id: string) => {
+    const response = await api.delete(`/evidence/${id}`);
+    return response.data;
+  },
+};
+
 export default api;

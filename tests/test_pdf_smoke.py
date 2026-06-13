@@ -295,3 +295,68 @@ async def test_packet_violation_uses_fl300():
 
     assert packet[:4] == b"%PDF"
     assert len(packet) > 10_240
+
+
+# ---------------------------------------------------------------------------
+# Exhibit assembly regression tests (appended)
+# ---------------------------------------------------------------------------
+
+def _make_evidence_dict(**kwargs) -> dict:
+    base = {
+        "id": "ev-smoke-1",
+        "evidence_type": "email",
+        "tags": ["non_payment"],
+        "source_date": "2026-03-15",
+        "description": "Respondent missed March payment",
+        "transcription": "I will not pay this month.",
+        "filename": None,
+        "user_confirmed": True,
+    }
+    base.update(kwargs)
+    return base
+
+
+@pytest.mark.asyncio
+async def test_packet_with_exhibit_contains_exhibit_a():
+    """Packet generated with confirmed evidence must contain 'EXHIBIT A' in text."""
+    motion = _make_motion_stub("RFO")
+    profile = _make_profile_stub()
+    sections = _make_llm_sections()
+    evidence = [_make_evidence_dict()]
+
+    packet = await generate_packet(motion, profile, sections, evidence=evidence)
+    text = _extract_text(packet)
+
+    assert "EXHIBIT A" in text, "EXHIBIT A must appear in merged packet when evidence provided"
+
+
+@pytest.mark.asyncio
+async def test_packet_without_evidence_page_count_unchanged():
+    """Regression: omitting evidence must not change page count vs. explicit empty list."""
+    motion = _make_motion_stub("RFO")
+    profile = _make_profile_stub()
+    sections = _make_llm_sections()
+
+    packet_none = await generate_packet(motion, profile, sections)
+    packet_empty = await generate_packet(motion, profile, sections, evidence=[])
+
+    reader_none = PyPDF2.PdfReader(io.BytesIO(packet_none))
+    reader_empty = PyPDF2.PdfReader(io.BytesIO(packet_empty))
+
+    assert len(reader_none.pages) == len(reader_empty.pages), (
+        "No evidence and empty evidence list must produce same page count"
+    )
+
+
+@pytest.mark.asyncio
+async def test_packet_exhibit_declaration_has_supporting_paragraph():
+    """Declaration text must include 'Supporting exhibits:' when evidence is present."""
+    motion = _make_motion_stub("RFO")
+    profile = _make_profile_stub()
+    sections = _make_llm_sections("Respondent has violated the custody order.")
+    evidence = [_make_evidence_dict()]
+
+    packet = await generate_packet(motion, profile, sections, evidence=evidence)
+    text = _extract_text(packet)
+
+    assert "Supporting exhibits:" in text

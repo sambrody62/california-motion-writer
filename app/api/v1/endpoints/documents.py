@@ -203,8 +203,35 @@ async def generate_pdf_sync(
             for draft in drafts
         ]
 
-        # Generate PDF packet (primary form + MC-030 declaration + FL-150 if support issue)
-        pdf_bytes = await generate_packet(motion, profile, llm_sections)
+        # Load confirmed evidence for this motion (late import — Evidence model may not exist yet).
+        evidence_dicts: list = []
+        try:
+            from app.models.evidence import Evidence  # noqa: PLC0415
+            ev_result = await db.execute(
+                select(Evidence)
+                .where(Evidence.motion_id == motion.id)
+                .where(Evidence.user_confirmed.is_(True))
+            )
+            ev_rows = ev_result.scalars().all()
+            evidence_dicts = [
+                {
+                    "id": str(ev.id),
+                    "evidence_type": ev.evidence_type,
+                    "tags": ev.tags or [],
+                    "source_date": str(ev.source_date) if ev.source_date else None,
+                    "description": ev.description or "",
+                    "transcription": ev.transcription,
+                    "filename": ev.filename,
+                    "user_confirmed": ev.user_confirmed,
+                }
+                for ev in ev_rows
+            ]
+        except (ImportError, Exception):
+            evidence_dicts = []
+
+        # Generate PDF packet (primary form + MC-030 declaration + FL-150 if support issue
+        # + exhibit pages if confirmed evidence exists)
+        pdf_bytes = await generate_packet(motion, profile, llm_sections, evidence=evidence_dicts)
 
         # Determine primary document type for record-keeping
         _mt_raw = motion.motion_type.value if hasattr(motion.motion_type, "value") else str(motion.motion_type)

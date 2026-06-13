@@ -16,6 +16,7 @@ import { PrivateRoute } from './components/PrivateRoute';
 import ChatInterface from './components/chat/ChatInterface';
 import { EmergencyHelp } from './components/emergency/EmergencyHelp';
 import { ViolationIntake } from './components/violation/ViolationIntake';
+import { EvidenceManager } from './components/evidence/EvidenceManager';
 
 function App() {
   return (
@@ -140,6 +141,16 @@ function App() {
             }
           />
           
+          {/* Evidence manager */}
+          <Route
+            path="/motion/:motionId/evidence"
+            element={
+              <PrivateRoute>
+                <EvidenceManager />
+              </PrivateRoute>
+            }
+          />
+
           {/* Violation/enforcement intake */}
           <Route
             path="/violation/intake"

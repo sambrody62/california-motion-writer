@@ -56,6 +56,7 @@ class Motion(Base):
     user = relationship("User", back_populates="motions")
     drafts = relationship("MotionDraft", back_populates="motion", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="motion", cascade="all, delete-orphan")
+    evidence = relationship("Evidence", back_populates="motion", cascade="all, delete-orphan")
 
 class MotionDraft(Base):
     __tablename__ = "motion_drafts"

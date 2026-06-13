@@ -2,7 +2,7 @@
 Main API router
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, profiles, motions, llm, documents, intake, violations
+from app.api.v1.endpoints import auth, users, profiles, motions, llm, documents, intake, violations, evidence
 from app.api.v1 import chat, chat_pdf
 
 api_router = APIRouter()
@@ -18,3 +18,4 @@ api_router.include_router(documents.router, prefix="/documents", tags=["Document
 api_router.include_router(violations.router, prefix="/violations", tags=["Violations"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
 api_router.include_router(chat_pdf.router, prefix="/chat-pdf", tags=["Chat-to-PDF"])
+api_router.include_router(evidence.router, prefix="/evidence", tags=["Evidence"])

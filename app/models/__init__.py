@@ -9,6 +9,7 @@ from app.models.chat import (
     ChatIntent,
     ConversationTemplate
 )
+from app.models.evidence import Evidence
 
 __all__ = [
     'User',
@@ -17,5 +18,6 @@ __all__ = [
     'ChatSession',
     'ChatMessage',
     'ChatIntent',
-    'ConversationTemplate'
+    'ConversationTemplate',
+    'Evidence',
 ]

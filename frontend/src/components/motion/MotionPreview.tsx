@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motionAPI, documentAPI } from '../../services/api';
+import { motionAPI, documentAPI, evidenceAPI } from '../../services/api';
 import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
 
@@ -36,6 +36,7 @@ export const MotionPreview: React.FC = () => {
 
   const [motion, setMotion] = useState<Motion | null>(null);
   const [drafts, setDrafts] = useState<MotionDraft[]>([]);
+  const [evidenceCount, setEvidenceCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -55,6 +56,13 @@ export const MotionPreview: React.FC = () => {
       ]);
       setMotion(motionResponse.data);
       setDrafts(draftsResponse.data.drafts || []);
+      // Load evidence count — non-blocking, never prevents PDF generation
+      try {
+        const evidenceItems = await evidenceAPI.list(motionId!);
+        setEvidenceCount(Array.isArray(evidenceItems) ? evidenceItems.length : 0);
+      } catch {
+        setEvidenceCount(0);
+      }
     } catch (error) {
       console.error('Failed to load motion:', error);
       navigate('/dashboard');
@@ -193,6 +201,21 @@ export const MotionPreview: React.FC = () => {
           </div>
         </div>
 
+        {/* Evidence & Exhibits section */}
+        <div className="bg-white shadow rounded-lg p-5 mb-6">
+          <button
+            type="button"
+            onClick={() => navigate(`/motion/${motionId}/evidence`)}
+            aria-label={`Evidence & exhibits (${evidenceCount})`}
+            className="w-full flex items-center justify-between group text-left"
+          >
+            <span className="text-base font-medium text-indigo-600 group-hover:text-indigo-500">
+              Evidence &amp; exhibits ({evidenceCount})
+            </span>
+            <span className="text-sm text-gray-400 group-hover:text-gray-600">Manage →</span>
+          </button>
+        </div>
+
         {/* Motion Sections */}
         <div className="space-y-6">
           {drafts.map((draft) => (
@@ -237,8 +260,13 @@ export const MotionPreview: React.FC = () => {
           ))}
         </div>
 
+        {/* Confirmed evidence note */}
+        <p className="mt-6 text-sm text-gray-500 text-center">
+          Confirmed evidence is attached as lettered exhibits in your PDF packet.
+        </p>
+
         {/* Action Buttons */}
-        <div className="mt-8 flex justify-between">
+        <div className="mt-4 flex justify-between">
           <button
             onClick={() => navigate('/dashboard')}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"

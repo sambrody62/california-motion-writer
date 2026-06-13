@@ -127,3 +127,6 @@ docker-volumes/
 *.tfstate
 *.tfstate.*
 .terraform/
+
+# Evidence file uploads (local dev storage)
+uploads/

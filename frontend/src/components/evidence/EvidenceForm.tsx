@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TagPicker } from './TagPicker';
 import { Evidence, EvidenceTag, EvidenceType } from './evidenceTypes';
+import { gmailEnabled } from '../../utils/featureFlags';
+import { GmailConnect } from './GmailConnect';
 
 type InputPath = 'paste' | 'upload';
 
@@ -11,9 +13,16 @@ interface EvidenceFormProps {
     file?: File;
   }) => Promise<void>;
   onCancel: () => void;
+  /** OCR suggestion from a prior upload response. Pre-fills transcription textarea. */
+  suggestedTranscription?: string;
 }
 
-export const EvidenceForm: React.FC<EvidenceFormProps> = ({ onSave, onCancel }) => {
+export const EvidenceForm: React.FC<EvidenceFormProps> = ({
+  onSave,
+  onCancel,
+  motionId,
+  suggestedTranscription,
+}) => {
   const [path, setPath] = useState<InputPath>('paste');
   const [evidenceType, setEvidenceType] = useState<EvidenceType>('text');
   const [description, setDescription] = useState('');
@@ -24,6 +33,13 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({ onSave, onCancel }) 
   const [confirmed, setConfirmed] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Pre-fill transcription when a suggestion arrives (OCR result from backend)
+  useEffect(() => {
+    if (suggestedTranscription) {
+      setTranscription(suggestedTranscription);
+    }
+  }, [suggestedTranscription]);
 
   const uploadSubmitEnabled = path === 'upload' && transcription.trim().length > 0;
   const pasteSubmitEnabled = path === 'paste';
@@ -151,6 +167,11 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({ onSave, onCancel }) 
             <p className="text-xs text-gray-500 mb-2">
               You must confirm the text before it can be used as an exhibit.
             </p>
+            {suggestedTranscription && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-2">
+                Suggested from your image — review and correct before confirming.
+              </p>
+            )}
             <textarea
               id="transcription"
               value={transcription}
@@ -181,6 +202,14 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({ onSave, onCancel }) 
 
       {/* Tags */}
       <TagPicker selected={tags} onChange={setTags} />
+
+      {/* Gmail import (feature flag gated) */}
+      {gmailEnabled() && (
+        <div>
+          <p className="text-sm text-gray-600 mb-1">Import from Gmail</p>
+          <GmailConnect motionId={motionId} accessToken="" />
+        </div>
+      )}
 
       {/* Confirmed accurate */}
       <label className="flex items-start gap-3 cursor-pointer">

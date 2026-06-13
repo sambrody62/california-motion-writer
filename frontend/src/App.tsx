@@ -17,6 +17,9 @@ import ChatInterface from './components/chat/ChatInterface';
 import { EmergencyHelp } from './components/emergency/EmergencyHelp';
 import { ViolationIntake } from './components/violation/ViolationIntake';
 import { EvidenceManager } from './components/evidence/EvidenceManager';
+import { GmailCallback } from './components/evidence/GmailCallback';
+import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
+import { Terms } from './components/legal/Terms';
 
 function App() {
   return (
@@ -160,6 +163,20 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          {/* Gmail OAuth callback (protected) */}
+          <Route
+            path="/evidence/gmail/callback"
+            element={
+              <PrivateRoute>
+                <GmailCallback />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Legal pages (public) */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<Terms />} />
 
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

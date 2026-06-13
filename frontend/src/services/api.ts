@@ -321,4 +321,38 @@ export const evidenceAPI = {
   },
 };
 
+// Gmail Evidence endpoints (GMAIL_EVIDENCE_ENABLED flag gated on the backend)
+export const gmailEvidenceAPI = {
+  getAuthUrl: async (): Promise<{ auth_url: string }> => {
+    const response = await api.get('/gmail/auth-url');
+    return response.data;
+  },
+
+  exchangeCode: async (code: string): Promise<{ access_token: string }> => {
+    const response = await api.post('/gmail/exchange-code', { code });
+    return response.data;
+  },
+
+  scan: async (motionId: string, accessToken: string): Promise<{
+    emails: Array<{
+      message_id: string;
+      subject: string;
+      from: string;
+      date: string;
+      snippet: string;
+    }>;
+  }> => {
+    const response = await api.post(`/motions/${motionId}/gmail/scan`, { access_token: accessToken });
+    return response.data;
+  },
+
+  import: async (motionId: string, accessToken: string, messageIds: string[]): Promise<{ imported: number }> => {
+    const response = await api.post(`/motions/${motionId}/gmail/import`, {
+      access_token: accessToken,
+      message_ids: messageIds,
+    });
+    return response.data;
+  },
+};
+
 export default api;

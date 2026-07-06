@@ -161,15 +161,16 @@ class PDFService:
             
             # Get field mappings for this form
             field_mappings = self.form_fields.get(form_type, {})
-            
+            overflow_sections = []  # (field_name, overflow_lines) — becomes attachment pages
+
             # Process each page
             for page_num in range(len(template_pdf.pages)):
                 page = template_pdf.pages[page_num]
-                
+
                 # Create overlay for this page
                 packet = io.BytesIO()
                 overlay_canvas = canvas.Canvas(packet, pagesize=letter)
-                
+
                 # Fill in fields for this page
                 for field_name, field_info in field_mappings.items():
                     if field_name in form_data:
@@ -177,25 +178,42 @@ class PDFService:
                         field_page = field_info["page"]
                         if field_page == -1:
                             field_page = len(template_pdf.pages) - 1
-                        
+
                         if field_page == page_num:
-                            self._write_field(
+                            overflow = self._write_field(
                                 overlay_canvas,
                                 field_info,
                                 form_data[field_name]
                             )
-                
+                            if overflow:
+                                overflow_sections.append((field_name, overflow))
+
                 overlay_canvas.save()
                 packet.seek(0)
-                
+
                 # Merge overlay with template page
                 overlay_pdf = PyPDF2.PdfReader(packet)
                 if len(overlay_pdf.pages) > 0:
                     overlay_page = overlay_pdf.pages[0]
                     page.merge_page(overlay_page)
-                
+
                 output_pdf.add_page(page)
-            
+
+            # Overflowed multiline text continues on attachment pages — no user
+            # text is ever dropped (California MC-025-style continuation)
+            if overflow_sections:
+                from app.services import pdf_text_utils as ptu
+
+                for field_name, overflow_lines in overflow_sections:
+                    label = field_name.replace("_", " ").title()
+                    attachment = ptu.build_continuation_pages(
+                        overflow_lines,
+                        caption=f"ATTACHMENT — {form_type} {label} (continued)",
+                        case_number=str(form_data.get("case_number", "")),
+                    )
+                    for att_page in PyPDF2.PdfReader(io.BytesIO(attachment)).pages:
+                        output_pdf.add_page(att_page)
+
             # Save to bytes
             output_buffer = io.BytesIO()
             output_pdf.write(output_buffer)
@@ -208,60 +226,34 @@ class PDFService:
             
             return output_buffer.getvalue()
     
-    def _write_field(self, canvas_obj, field_info: Dict, value: Any):
-        """Write a field value to the canvas"""
+    def _write_field(self, canvas_obj, field_info: Dict, value: Any) -> List[str]:
+        """Write a field value to the canvas. Returns overflow lines (multiline only)."""
+        from app.services import pdf_text_utils as ptu
+
         x = field_info["x"]
         y = field_info["y"]
         field_type = field_info["type"]
-        
+
         if field_type == "text":
-            # Single line text
-            canvas_obj.drawString(x, y, str(value))
-            
+            # Single line: shrink to fit the box, truncate visibly at the floor —
+            # never draw past the field into neighboring content
+            max_width = field_info.get("width", 250)
+            size, text = ptu.fit_single_line(str(value), max_width)
+            canvas_obj.setFont(ptu.FONT, size)
+            canvas_obj.drawString(x, y, text)
+            canvas_obj.setFont(ptu.FONT, ptu.DEFAULT_SIZE)
+
         elif field_type == "checkbox":
-            # Draw X or checkmark if True
             if value:
                 canvas_obj.drawString(x, y, "X")
-                
+
         elif field_type == "multiline":
-            # Multi-line text with word wrap
             width = field_info.get("width", 400)
             height = field_info.get("height", 100)
-            text = str(value)
-            
-            # Simple word wrap (you might want to use reportlab's Paragraph for better formatting)
-            lines = self._wrap_text(text, width, canvas_obj)
-            line_height = 12
-            current_y = y
-            
-            for line in lines:
-                if current_y < (y - height):
-                    break  # Don't exceed field height
-                canvas_obj.drawString(x, current_y, line)
-                current_y -= line_height
-    
-    def _wrap_text(self, text: str, width: float, canvas_obj) -> List[str]:
-        """Simple text wrapping"""
-        words = text.split()
-        lines = []
-        current_line = []
-        
-        for word in words:
-            test_line = ' '.join(current_line + [word])
-            # Approximate width check (you'd want to use stringWidth for accuracy)
-            if len(test_line) * 6 > width:  # Rough approximation
-                if current_line:
-                    lines.append(' '.join(current_line))
-                    current_line = [word]
-                else:
-                    lines.append(word)
-            else:
-                current_line.append(word)
-        
-        if current_line:
-            lines.append(' '.join(current_line))
-        
-        return lines
+            lines = ptu.wrap_text_accurate(str(value), width)
+            return ptu.draw_lines_in_box(canvas_obj, lines, x, y, height)
+
+        return []
     
     async def generate_motion_pdf(
         self,

@@ -158,12 +158,12 @@ class TestPDFService:
         # Should be called multiple times for multiple lines
         assert mock_canvas.drawString.call_count >= 1
 
-    def test_wrap_text(self, pdf_service: PDFService):
-        """Test text wrapping functionality."""
-        mock_canvas = MagicMock()
-        text = "This is a very long line of text that should be wrapped to multiple lines"
+    def test_wrap_text(self):
+        """Text wrapping moved to pdf_text_utils (accurate stringWidth-based)."""
+        from app.services.pdf_text_utils import wrap_text_accurate
 
-        lines = pdf_service._wrap_text(text, 100, mock_canvas)
+        text = "This is a very long line of text that should be wrapped to multiple lines"
+        lines = wrap_text_accurate(text, 100)
 
         assert isinstance(lines, list)
         assert len(lines) > 1

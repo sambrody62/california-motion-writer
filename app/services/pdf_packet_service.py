@@ -97,6 +97,9 @@ async def _fill_mc030(profile: _ProfileLike, declaration_text: str) -> bytes:
         "declaration_text": declaration_text,
     }
 
+    from app.services import pdf_text_utils as ptu
+
+    overflow_lines: List[str] = []
     with open(_MC030_PATH, "rb") as fh:
         reader = PyPDF2.PdfReader(fh)
         writer = PyPDF2.PdfWriter()
@@ -113,8 +116,9 @@ async def _fill_mc030(profile: _ProfileLike, declaration_text: str) -> bytes:
                 c.drawString(100, 680, f"Petitioner: {profile.party_name}")
                 c.drawString(100, 662, f"Respondent: {profile.other_party_name}")
                 c.drawString(400, 680, f"Case No.: {profile.case_number}")
-                # Declaration body
-                _write_wrapped(c, declaration_text, x=72, y=580, width=468, height=460)
+                # Declaration body — overflow continues on attachment pages
+                lines = ptu.wrap_text_accurate(declaration_text, width=468)
+                overflow_lines = ptu.draw_lines_in_box(c, lines, x=72, y=580, height=460)
 
             c.save()
             overlay_buf.seek(0)
@@ -123,6 +127,15 @@ async def _fill_mc030(profile: _ProfileLike, declaration_text: str) -> bytes:
             if overlay_reader.pages:
                 page.merge_page(overlay_reader.pages[0])
             writer.add_page(page)
+
+        if overflow_lines:
+            attachment = ptu.build_continuation_pages(
+                overflow_lines,
+                caption="ATTACHMENT — Declaration (continued)",
+                case_number=str(profile.case_number or ""),
+            )
+            for att_page in PyPDF2.PdfReader(io.BytesIO(attachment)).pages:
+                writer.add_page(att_page)
 
     buf = io.BytesIO()
     writer.write(buf)
@@ -153,32 +166,6 @@ def _merge_pdfs(parts: List[bytes]) -> bytes:
     return buf.read()
 
 
-def _write_wrapped(canvas_obj, text: str, x: float, y: float, width: float, height: float):
-    """Word-wrap text onto canvas within the given bounding box."""
-    words = text.split()
-    lines: List[str] = []
-    current: List[str] = []
-
-    for word in words:
-        candidate = " ".join(current + [word])
-        if len(candidate) * 6 > width:
-            if current:
-                lines.append(" ".join(current))
-                current = [word]
-            else:
-                lines.append(word)
-        else:
-            current.append(word)
-    if current:
-        lines.append(" ".join(current))
-
-    line_h = 12
-    cur_y = y
-    for line in lines:
-        if cur_y < (y - height):
-            break
-        canvas_obj.drawString(x, cur_y, line)
-        cur_y -= line_h
 
 
 async def generate_packet(

@@ -1,12 +1,17 @@
 """
 Evidence file storage service.
 
-In development (USE_GCP=false), files are stored under uploads/{motion_id}/.
-In production with GCP available, files are uploaded to GCS with a local fallback.
+Backend is selected by STORAGE_BACKEND env: supabase | gcs | local.
+When unset, falls back to the original behavior (GCS if USE_GCP and the
+library is available, otherwise local disk under uploads/{motion_id}/).
+Uploads never hard-fail into the request path — on backend error the file
+is written to local disk so user evidence is not lost.
 """
 import os
 import logging
 from pathlib import Path
+
+import httpx
 
 from app.core.config import settings
 
@@ -32,18 +37,27 @@ def _sanitize_filename(filename: str) -> str:
     return os.path.basename(filename)
 
 
+def _backend() -> str:
+    explicit = os.getenv("STORAGE_BACKEND", "").lower()
+    if explicit in ("supabase", "gcs", "local"):
+        return explicit
+    return "gcs" if (USE_GCP and _gcs_available) else "local"
+
+
 def save_file(motion_id: str, filename: str, content: bytes) -> str:
     """
     Persist evidence file content and return the storage path.
 
     Raises ValueError for empty filenames.
-    Delegates to GCS when available, otherwise writes to local disk.
     """
     clean_name = _sanitize_filename(filename)
     if not clean_name:
         raise ValueError("Filename must not be empty after sanitization")
 
-    if USE_GCP and _gcs_available:
+    backend = _backend()
+    if backend == "supabase":
+        return _save_to_supabase(motion_id, clean_name, content)
+    if backend == "gcs" and _gcs_available:
         return _save_to_gcs(motion_id, clean_name, content)
     return _save_to_disk(motion_id, clean_name, content)
 
@@ -54,6 +68,28 @@ def _save_to_disk(motion_id: str, filename: str, content: bytes) -> str:
     dest_path = dest_dir / filename
     dest_path.write_bytes(content)
     return str(dest_path)
+
+
+def _save_to_supabase(motion_id: str, filename: str, content: bytes) -> str:
+    bucket = os.getenv("SUPABASE_EVIDENCE_BUCKET", "evidence")
+    object_path = f"evidence/{motion_id}/{filename}"
+    try:
+        response = httpx.post(
+            f"{os.environ['SUPABASE_URL']}/storage/v1/object/{bucket}/{object_path}",
+            content=content,
+            headers={
+                "Authorization": f"Bearer {os.environ['SUPABASE_SERVICE_KEY']}",
+                "Content-Type": "application/octet-stream",
+                "x-upsert": "true",
+            },
+            timeout=30.0,
+        )
+        if response.status_code >= 400:
+            raise RuntimeError(f"Supabase storage returned {response.status_code}")
+        return f"supabase://{bucket}/{object_path}"
+    except Exception as exc:
+        logger.error("Supabase upload failed for motion=%s; falling back to disk: %s", motion_id, exc)
+        return _save_to_disk(motion_id, filename, content)
 
 
 def _save_to_gcs(motion_id: str, filename: str, content: bytes) -> str:

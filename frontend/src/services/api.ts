@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+// Production URL comes from the build-time env (set in Vercel / .env.production);
+// the literal fallback is the Render service URL.
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://motion-api-479935274378.us-central1.run.app/api/v1'
+  ? (process.env.REACT_APP_API_URL || 'https://california-motion-api.onrender.com/api/v1')
   : 'http://127.0.0.1:8000/api/v1';
 
 const api = axios.create({

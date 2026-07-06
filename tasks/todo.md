@@ -46,3 +46,38 @@ Build strategy: orchestrator (this session) + Sonnet subagents for implementatio
 - Commits: chore(test) infra repair, fix(api) contract alignment.
 - Notable: motions.py debug endpoint + DEBUG prints removed; profiles/motions gained PUT/DELETE; register returns 201.
 - Flagged for later: chat_service intent regex misses "violated/violating/violations" (M3 triage work); pydantic/datetime deprecation warnings.
+
+### M1 — MVP Integration (DONE 2026-06-12)
+- All 5 frontend API stubs replaced with real backend calls; auth path and dev port fixed; useAuth shadow stub deleted.
+- All 5 backend bugs fixed (enhance_declaration, walrus bug, Profile city/zip/state, WebSocket JWT auth, document download endpoint).
+- PDF generation PROVEN: E2E test produces 306KB FL-300 with extractable party names. Found+fixed FL-150 missing caption fields. Key learning: templates are encrypted AcroForms — coordinate overlay is the right strategy, AcroForm field-filling silently fails.
+- Profile auto-fill, LLM loading state, LLM-failure-never-blocks-PDF, completion tracking, filing checklist (5 counties) all in.
+- Suites: backend 142 passed + 3 xfailed; frontend 73 passed.
+- Commits: feat(backend) 4f49fa4, feat(frontend) c2fdc6b, docs f3008e0.
+- KNOWN GAP → M3: no generate_packet() — FL-150 not auto-bundled when support issue present; single-form PDFs only.
+
+### M2 — Claude LLM Backend (DONE 2026-06-12)
+- Haiku 4.5 (chat/classification/UPL checks) + Sonnet 4.6 (drafting), USE_CLAUDE flag, prompt caching, UPL guardrails in system prompt + validate_output advice-phrase scan. 24 new tests.
+- PENDING USER: ANTHROPIC_API_KEY in .env / Secret Manager + USE_CLAUDE=true to go live.
+
+### M3 — Phase 2 Forms (DONE 2026-06-12)
+- generate_packet() multi-form PDFs (closes M1 gap); FL-320 Response flow with 9-court-day deadline warning; FL-150 standalone; support-only path hides custody questions; violations wizard wired to existing SD backend; /emergency public route (911 banner, quick exit, DVRO/ex parte links — no DV generation, templates not in repo); triage panel (RFO vs contempt, neutral, never auto-routes).
+- Suites: backend 174 + 3 xfailed, frontend 121. Committed.
+- Remaining for M4: evidence upload/tagging/exhibit assembly. Tech debt: llm_service.py 634 lines (>300 rule).
+
+### M4 — Evidence Synthesis (DONE 2026-06-12) = v1.0 launch feature freeze
+- Evidence model + storage + CRUD; exhibit assembly (lettered exhibits, cover page, mechanical reference paragraph) into PDF packets; evidence UI with manual paste + upload-with-transcription. Backend 219, frontend 132.
+
+### v1.1 — Gmail + OCR adapters (DONE 2026-06-12, flag-gated OFF)
+- Two-version structure per user request: v1.0 launches without Gmail/OCR; v1.1 ships the same codebase with GMAIL_EVIDENCE_ENABLED / OCR_ENABLED / REACT_APP_GMAIL_ENABLED defaulting off. Flip flags (no code change) when Google approves.
+- Gmail: stateless OAuth, scan-by-other-party, import as unconfirmed Evidence. OCR: Cloud Vision pre-fill suggestion on upload, user still confirms. Privacy policy + terms pages (/privacy, /terms), docs/GOOGLE_OAUTH_SETUP.md. Backend 244, frontend 161.
+- NO iMessage integration (no platform API exists — screenshots+OCR is the path).
+
+## LAUNCH-BLOCKING (user actions, none are code)
+1. Google OAuth verification — submit gmail.readonly (weeks; test mode works for 100 users now). See docs/GOOGLE_OAUTH_SETUP.md.
+2. ANTHROPIC_API_KEY in .env + USE_CLAUDE=true to switch live drafting to Claude (mock works without).
+3. Attorney review of privacy policy + terms (PRD hard blocker OD6) — pages carry visible "pending review" notices.
+4. Staging deploy (needs go-ahead — touches GCP bill + live URL).
+
+## Tech debt
+- llm_service.py 634 lines (>300 rule, predates the rule). Split candidates: mock-response strings, prompt builders.

@@ -21,6 +21,24 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+
+def _normalize_database_url(url: str) -> str:
+    """Ensure postgres URLs use the asyncpg driver (Supabase/Render give postgres://)."""
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+def _connect_args_for(url: str) -> dict:
+    # Supabase pooler (pgBouncer transaction mode, port 6543) can't use
+    # asyncpg's prepared-statement cache; direct connections (5432) can.
+    if ":6543" in url:
+        return {"statement_cache_size": 0}
+    return {}
+
+
 class Database:
     def __init__(self):
         self.engine = None
@@ -54,10 +72,12 @@ class Database:
     
     async def init(self):
         """Initialize database connection"""
-        # For local development with SQLite
-        # Check for explicit local database flag or development without GCP for database
+        env_url = os.getenv("DATABASE_URL")
         use_local_db = os.getenv("USE_LOCAL_DATABASE", "false").lower() == "true"
-        if settings.ENVIRONMENT == "development" and (use_local_db or not USE_GCP):
+        if env_url:
+            # Explicit connection string (Supabase/Render path) wins over everything
+            DATABASE_URL = _normalize_database_url(env_url)
+        elif settings.ENVIRONMENT == "development" and (use_local_db or not USE_GCP):
             DATABASE_URL = "sqlite+aiosqlite:///./local.db"
         else:
             password = await self.get_db_password()
@@ -76,14 +96,17 @@ class Database:
                     f"localhost:5432/{settings.DB_NAME}"
                 )
         
-        # Create async engine
-        self.engine = create_async_engine(
-            DATABASE_URL,
-            echo=True if settings.ENVIRONMENT == "development" else False,
-            pool_size=20,
-            max_overflow=40,
-            pool_pre_ping=True,
-        )
+        # Create async engine (pool sized for Supabase free tier via env; GCP defaults preserved)
+        engine_kwargs = {
+            "echo": True if settings.ENVIRONMENT == "development" else False,
+            "pool_pre_ping": True,
+        }
+        if not DATABASE_URL.startswith("sqlite"):
+            # SQLite's StaticPool rejects pool sizing arguments
+            engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "20"))
+            engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "40"))
+            engine_kwargs["connect_args"] = _connect_args_for(DATABASE_URL)
+        self.engine = create_async_engine(DATABASE_URL, **engine_kwargs)
         
         # Create session factory
         self.async_session = async_sessionmaker(
@@ -95,9 +118,20 @@ class Database:
         logger.info("Database connection initialized")
     
     async def create_tables(self):
-        """Create all tables"""
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        """Create all tables (idempotent, race-tolerant across workers)"""
+        from sqlalchemy.exc import OperationalError, ProgrammingError
+
+        try:
+            async with self.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        except (OperationalError, ProgrammingError) as exc:
+            # With multiple uvicorn workers, both can pass create_all's
+            # existence check and race the CREATE; the loser's error means
+            # the tables exist, which is the outcome we wanted.
+            if "already exists" in str(exc).lower():
+                logger.info("Tables already created by a concurrent worker")
+            else:
+                raise
     
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """Get database session"""
@@ -117,9 +151,9 @@ db = Database()
 async def init_db():
     """Initialize database on startup"""
     await db.init()
-    # Optionally create tables (for development)
-    if settings.ENVIRONMENT == "development":
-        await db.create_tables()
+    # create_all is idempotent (checkfirst) — required for first boot against
+    # a fresh Supabase database; no Alembic in this project
+    await db.create_tables()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get database session"""

@@ -35,13 +35,15 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy application code
+# Copy application code and runtime data files
 COPY app/ ./app/
-COPY main.py .
 COPY llm-prompts.md .
+COPY rfo-questions.json .
+COPY forms/ ./forms/
 
-# Create non-root user for security
+# Create non-root user for security; uploads/ needed for local-disk evidence fallback
 RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/uploads && \
     chown -R appuser:appuser /app
 
 USER appuser
@@ -57,12 +59,12 @@ ENV DAILY_COST_LIMIT=50.0
 ENV MONTHLY_COST_LIMIT=500.0
 ENV EMERGENCY_SHUTDOWN_THRESHOLD=100.0
 
-# Health check
+# Health check (PORT is set by Render/Cloud Run; defaults to 8080)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Expose port (Cloud Run uses PORT env var)
+# Expose default port (hosts inject PORT at runtime)
 EXPOSE 8080
 
-# Run the application with uvicorn for better performance
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]
+# Shell form so ${PORT} expands (Render requires binding to its assigned port)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 2"]

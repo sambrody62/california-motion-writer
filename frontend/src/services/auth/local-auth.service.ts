@@ -1,6 +1,8 @@
 // Local authentication service for development
 // This connects to the backend API for authentication
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api/v1';
+
 interface User {
   id: string;
   email: string;
@@ -36,7 +38,7 @@ export class LocalAuthService {
   // Register new user using backend API
   async register(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await fetch('http://127.0.0.1:8003/api/v1/auth/register', {
+      const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +64,7 @@ export class LocalAuthService {
         localStorage.setItem('token', this.token);
 
         // Fetch user data using the token
-        const userResponse = await fetch('http://127.0.0.1:8003/api/v1/users/me', {
+        const userResponse = await fetch(`${API_BASE}/users/me`, {
           headers: {
             'Authorization': `Bearer ${this.token}`
           }
@@ -100,7 +102,7 @@ export class LocalAuthService {
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await fetch('http://127.0.0.1:8003/api/v1/auth/token', {
+      const response = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
         body: formData,
       });
@@ -118,7 +120,7 @@ export class LocalAuthService {
         localStorage.setItem('token', this.token);
 
         // Fetch user data using the token
-        const userResponse = await fetch('http://127.0.0.1:8003/api/v1/users/me', {
+        const userResponse = await fetch(`${API_BASE}/users/me`, {
           headers: {
             'Authorization': `Bearer ${this.token}`
           }
@@ -207,7 +209,7 @@ export class LocalAuthService {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8003/api/v1/users/me', {
+      const response = await fetch(`${API_BASE}/users/me`, {
         headers: {
           'Authorization': `Bearer ${this.token}`
         }

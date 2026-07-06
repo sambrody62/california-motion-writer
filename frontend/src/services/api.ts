@@ -1,10 +1,12 @@
 import axios from 'axios';
+import { evalCondition } from '../utils/conditionEval';
 
-// Production URL comes from the build-time env (set in Vercel / .env.production);
-// the literal fallback is the Render service URL.
-const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? (process.env.REACT_APP_API_URL || 'https://california-motion-api.onrender.com/api/v1')
-  : 'http://127.0.0.1:8000/api/v1';
+// REACT_APP_API_URL (build-time env: Vercel in prod, frontend/.env in dev)
+// always wins; the literal fallbacks are Render (prod) and local Docker (dev).
+const API_BASE_URL = process.env.REACT_APP_API_URL
+  || (process.env.NODE_ENV === 'production'
+    ? 'https://california-motion-api.onrender.com/api/v1'
+    : 'http://127.0.0.1:8000/api/v1');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -161,7 +163,6 @@ export const motionAPI = {
     return response.data;
   }
 };
-import { evalCondition } from '../utils/conditionEval';
 
 export const intakeAPI = {
   getQuestions: async (formType: string, stepNumber?: number) => {

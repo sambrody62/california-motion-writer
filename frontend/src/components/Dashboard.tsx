@@ -51,7 +51,7 @@ export const Dashboard: React.FC = () => {
 
       // Load motions
       const motionsResponse = await motionAPI.list();
-      setMotions(motionsResponse.data.motions || []);
+      setMotions(Array.isArray(motionsResponse) ? motionsResponse : []);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {

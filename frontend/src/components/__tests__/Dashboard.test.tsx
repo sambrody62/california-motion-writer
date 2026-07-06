@@ -62,7 +62,7 @@ describe('Dashboard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset API mocks
-    motionAPI.list.mockResolvedValue({ data: { motions: [] } });
+    motionAPI.list.mockResolvedValue([]);
     profileAPI.get.mockRejectedValue(new Error('No profile found'));
   });
 
@@ -183,7 +183,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 
@@ -207,7 +207,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 
@@ -229,7 +229,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 
@@ -277,7 +277,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 
@@ -314,7 +314,7 @@ describe('Dashboard', () => {
   });
 
   test('handles empty motion list correctly', async () => {
-    motionAPI.list.mockResolvedValue({ data: { motions: [] } });
+    motionAPI.list.mockResolvedValue([]);
 
     renderWithRouter(<Dashboard />);
 
@@ -335,7 +335,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 
@@ -357,7 +357,7 @@ describe('Dashboard', () => {
       }
     ];
 
-    motionAPI.list.mockResolvedValue({ data: { motions: mockMotions } });
+    motionAPI.list.mockResolvedValue(mockMotions);
 
     renderWithRouter(<Dashboard />);
 

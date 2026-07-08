@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChatBubbleBottomCenterTextIcon, DocumentTextIcon, ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { FORM_METADATA, FORM_REQUIREMENTS, FormType } from '../../types/forms';
 
 export const FormFlowSelector: React.FC = () => {
@@ -28,10 +28,6 @@ export const FormFlowSelector: React.FC = () => {
     );
   }
 
-  const handleChatFlow = () => {
-    navigate(`/chat/${formType}`);
-  };
-
   const handleFormsFlow = () => {
     navigate(`/form/guided/${formType}`);
   };
@@ -49,11 +45,6 @@ export const FormFlowSelector: React.FC = () => {
       default:
         return 'Choose how you\'d like to complete this form.';
     }
-  };
-
-  const shouldShowChatOption = () => {
-    // Chat is helpful for complex forms and first-time users
-    return formMetadata.complexity !== 'simple';
   };
 
   return (
@@ -126,64 +117,15 @@ export const FormFlowSelector: React.FC = () => {
           </div>
         </div>
 
-        {/* Option Cards */}
-        <div className={`grid gap-8 ${shouldShowChatOption() ? 'md:grid-cols-2' : 'max-w-md mx-auto'}`}>
-          {/* Chat Option - Only for complex forms */}
-          {shouldShowChatOption() && (
-            <button
-              onClick={handleChatFlow}
-              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-indigo-500"
-            >
-              <div className="absolute -top-3 left-6 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                Recommended for complex forms
-              </div>
-
-              <div className="flex flex-col items-center text-center">
-                <div className="bg-indigo-100 p-4 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
-                  <ChatBubbleBottomCenterTextIcon className="h-12 w-12 text-indigo-600" />
-                </div>
-
-                <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                  💬 Chat with Assistant
-                </h2>
-
-                <p className="text-gray-600 mb-4">
-                  Get help understanding what information you need and how to fill out this form correctly.
-                </p>
-
-                <ul className="text-left text-sm text-gray-500 space-y-2 w-full">
-                  <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Get explanations for complex terms</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Legal guidance as you go</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Help organizing required information</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Best for first-time filers</span>
-                  </li>
-                </ul>
-
-                <div className="mt-6 text-indigo-600 font-medium group-hover:text-indigo-700">
-                  Start conversation →
-                </div>
-              </div>
-            </button>
-          )}
-
+        {/* Option Card */}
+        <div className="max-w-md mx-auto">
           {/* Forms Option */}
           <button
             onClick={handleFormsFlow}
-            className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-blue-500"
+            className="group relative w-full bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-blue-500"
           >
             <div className="absolute -top-3 left-6 bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-              {formMetadata.complexity === 'simple' ? 'Quick & direct' : 'Faster if you have the info'}
+              Step-by-step guidance
             </div>
 
             <div className="flex flex-col items-center text-center">
@@ -263,10 +205,7 @@ export const FormFlowSelector: React.FC = () => {
         {/* Help text */}
         <div className="mt-12 text-center">
           <p className="text-sm text-gray-500">
-            Need help deciding? {shouldShowChatOption() ? 'The chat assistant is recommended for complex forms.' : 'This form is straightforward to complete.'}
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            You can get help or switch methods at any time during the process.
+            Each step has clear instructions, and your answers are saved as you move between steps.
           </p>
         </div>
       </div>

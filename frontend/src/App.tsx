@@ -13,7 +13,6 @@ import { CaseIntake } from './components/case/CaseIntake';
 import { GameplanCreation } from './components/case/GameplanCreation';
 import { FormExecution } from './components/case/FormExecution';
 import { PrivateRoute } from './components/PrivateRoute';
-import ChatInterface from './components/chat/ChatInterface';
 import { EmergencyHelp } from './components/emergency/EmergencyHelp';
 import { ViolationIntake } from './components/violation/ViolationIntake';
 import { EvidenceManager } from './components/evidence/EvidenceManager';
@@ -93,16 +92,6 @@ function App() {
               </PrivateRoute>
             }
           />
-          {/* Chat path with form context */}
-          <Route
-            path="/chat/:formType"
-            element={
-              <PrivateRoute>
-                <ChatInterface />
-              </PrivateRoute>
-            }
-          />
-
           {/* Legacy motion routes - redirect to new form routes */}
           <Route
             path="/motion/new/:motionType"
@@ -190,8 +179,6 @@ function App() {
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-
-        {/* Chat interface - now rendered in specific route */}
       </Router>
     </FirebaseAuthProvider>
   );

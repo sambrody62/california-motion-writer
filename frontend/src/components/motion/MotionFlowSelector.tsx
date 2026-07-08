@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChatBubbleBottomCenterTextIcon, DocumentTextIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export const MotionFlowSelector: React.FC = () => {
   const navigate = useNavigate();
@@ -17,11 +17,6 @@ export const MotionFlowSelector: React.FC = () => {
       default:
         return 'Motion';
     }
-  };
-
-  const handleChatFlow = () => {
-    // Navigate to chat interface with motion context
-    navigate(`/chat/${motionType}`);
   };
 
   const handleFormsFlow = () => {
@@ -47,70 +42,17 @@ export const MotionFlowSelector: React.FC = () => {
             {getMotionTitle()}
           </h1>
           <p className="text-lg text-gray-600">
-            How would you like to create your motion?
+            Complete step-by-step forms to create your motion.
           </p>
         </div>
 
-        {/* Option Cards */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Chat Option */}
-          <button
-            onClick={handleChatFlow}
-            className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-indigo-500"
-          >
-            {/* Recommended badge */}
-            <div className="absolute -top-3 left-6 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-              Recommended for first-timers
-            </div>
-
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-indigo-100 p-4 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
-                <ChatBubbleBottomCenterTextIcon className="h-12 w-12 text-indigo-600" />
-              </div>
-
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                💬 Chat with Assistant
-              </h2>
-
-              <p className="text-gray-600 mb-4">
-                Tell me about your situation in your own words. I'll help you understand what you need and create a plan together.
-              </p>
-
-              <ul className="text-left text-sm text-gray-500 space-y-2 w-full">
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Conversational and easy</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Get legal guidance as you go</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>AI helps organize your thoughts</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span>Perfect if you're not sure what you need</span>
-                </li>
-              </ul>
-
-              <div className="mt-6 text-indigo-600 font-medium group-hover:text-indigo-700">
-                Start conversation →
-              </div>
-            </div>
-          </button>
-
+        {/* Option Card */}
+        <div className="max-w-md mx-auto">
           {/* Forms Option */}
           <button
             onClick={handleFormsFlow}
-            className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-blue-500"
+            className="group relative w-full bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-blue-500"
           >
-            {/* Faster badge */}
-            <div className="absolute -top-3 left-6 bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-              Faster if you know what you need
-            </div>
-
             <div className="flex flex-col items-center text-center">
               <div className="bg-blue-100 p-4 rounded-full mb-4 group-hover:bg-blue-200 transition-colors">
                 <DocumentTextIcon className="h-12 w-12 text-blue-600" />
@@ -153,10 +95,7 @@ export const MotionFlowSelector: React.FC = () => {
         {/* Help text */}
         <div className="mt-12 text-center">
           <p className="text-sm text-gray-500">
-            Not sure which to choose? The chat assistant is recommended if this is your first time filing a motion.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            You can always switch between methods or get help at any time.
+            Each step has clear instructions, and your answers are saved as you move between steps.
           </p>
         </div>
       </div>

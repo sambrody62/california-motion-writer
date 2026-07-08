@@ -72,9 +72,9 @@ describe('MotionPreview', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseLocation.mockReturnValue({ state: null, pathname: '/motion/motion-123/preview' });
-    mockGetMotion.mockResolvedValue({ data: mockMotion });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: mockDrafts } });
-    mockGeneratePDFSync.mockResolvedValue({ data: new ArrayBuffer(100) });
+    mockGetMotion.mockResolvedValue(mockMotion);
+    mockGetDrafts.mockResolvedValue(mockDrafts);
+    mockGeneratePDFSync.mockResolvedValue(new ArrayBuffer(100));
   });
 
   test('renders motion preview with case info', async () => {

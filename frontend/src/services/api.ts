@@ -204,16 +204,6 @@ export const intakeAPI = {
 };
 
 export const documentAPI = {
-  generate: async (motionId: string) => {
-    const response = await api.post(`/motions/${motionId}/generate-pdf`);
-    return response.data;
-  },
-  download: async (motionId: string) => {
-    const response = await api.get(`/motions/${motionId}/download`, {
-      responseType: 'blob'
-    });
-    return response.data;
-  },
   generatePDFSync: async (motionId: string): Promise<ArrayBuffer> => {
     const response = await api.post(
       '/documents/generate-pdf-sync',

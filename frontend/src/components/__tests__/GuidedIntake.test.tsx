@@ -75,8 +75,8 @@ describe('GuidedIntake', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
-    mockCreate.mockResolvedValue({ data: { id: 'motion-123' } });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: [] } });
+    mockCreate.mockResolvedValue({ id: 'motion-123' });
+    mockGetDrafts.mockResolvedValue([]);
     mockSaveDraft.mockResolvedValue({ success: true });
     mockProcessWithLLM.mockResolvedValue({ success: true });
     mockGetQuestions.mockResolvedValue({ data: MOCK_STEP_DATA });
@@ -121,16 +121,12 @@ describe('GuidedIntake', () => {
   });
 
   test('does not autofill fields that already have saved values', async () => {
-    mockGetDrafts.mockResolvedValue({
-      data: {
-        drafts: [
-          {
-            step_number: 1,
-            question_data: { party_name: 'Existing Name', case_number: 'EXISTING-001' },
-          },
-        ],
+    mockGetDrafts.mockResolvedValue([
+      {
+        step_number: 1,
+        question_data: { party_name: 'Existing Name', case_number: 'EXISTING-001' },
       },
-    });
+    ]);
 
     renderWithRouter(<GuidedIntake />);
 
@@ -142,6 +138,55 @@ describe('GuidedIntake', () => {
     // case_number saved value should not be overwritten
     const caseNumberInput = screen.getByLabelText(/Case Number/i) as HTMLInputElement;
     expect(caseNumberInput.value).toBe('EXISTING-001');
+  });
+
+  test('submitting a step saves the draft with the DraftUpdate payload shape', async () => {
+    renderWithRouter(<GuidedIntake />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Complete/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Complete/i }));
+
+    // The backend requires {step_number, step_name, question_data} — a positional
+    // step number here serializes to {} and 422s (2026-07-06 E2E finding #1)
+    await waitFor(() => {
+      expect(mockSaveDraft).toHaveBeenCalledWith(
+        'motion-123',
+        expect.objectContaining({
+          step_number: 1,
+          step_name: 'Case Information',
+          question_data: expect.any(Object),
+        })
+      );
+    });
+  });
+
+  test('when launched from FormExecution, completing returns to /case/forms', async () => {
+    mockUseLocation.mockReturnValue({
+      state: { fromFormExecution: true, formExecutionFormIndex: 0 },
+      pathname: '/form/guided/FL_300',
+    });
+
+    renderWithRouter(<GuidedIntake />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Complete/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Complete/i }));
+
+    // FormExecution is mounted at /case/forms — navigating to /form/execution
+    // matches no route and rendered a blank page (2026-07-07 E2E finding)
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/case/forms',
+        expect.objectContaining({
+          state: expect.objectContaining({ completedFormIndex: 0 }),
+        })
+      );
+    });
   });
 
   test('LLM failure path still navigates to preview with user words', async () => {
@@ -245,8 +290,8 @@ describe('GuidedIntake — FL-320 deadline warning', () => {
     jest.clearAllMocks();
     mockFormType = 'FL-320';
     mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
-    mockCreate.mockResolvedValue({ data: { id: 'motion-456' } });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: [] } });
+    mockCreate.mockResolvedValue({ id: 'motion-456' });
+    mockGetDrafts.mockResolvedValue([]);
     mockSaveDraft.mockResolvedValue({ success: true });
     mockProcessWithLLM.mockResolvedValue({ success: true });
     mockGetQuestions.mockResolvedValue({ data: MOCK_FL320_STEP_WITH_DATE_SERVED });
@@ -346,7 +391,7 @@ describe('GuidedIntake — FL-300 support-only hides custody questions', () => {
     mockFormType = 'FL_300';
     mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
     mockCreate.mockResolvedValue({ data: { id: 'motion-789' } });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: [] } });
+    mockGetDrafts.mockResolvedValue([]);
     mockSaveDraft.mockResolvedValue({ success: true });
     mockProcessWithLLM.mockResolvedValue({ success: true });
     mockGetQuestions.mockResolvedValue({ data: MOCK_FL300_CUSTODY_STEP });
@@ -451,7 +496,7 @@ describe('GuidedIntake — FL-150 conditional income fields', () => {
     mockFormType = 'FL-150';
     mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
     mockCreate.mockResolvedValue({ data: { id: 'motion-fl150' } });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: [] } });
+    mockGetDrafts.mockResolvedValue([]);
     mockSaveDraft.mockResolvedValue({ success: true });
     mockProcessWithLLM.mockResolvedValue({ success: true });
     mockGetQuestions.mockResolvedValue({ data: MOCK_FL150_INCOME_STEP });

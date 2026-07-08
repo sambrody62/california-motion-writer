@@ -92,8 +92,8 @@ describe('MotionPreview — evidence section', () => {
       state: null,
       pathname: '/motion/motion-abc/preview',
     });
-    mockGetMotion.mockResolvedValue({ data: mockMotion });
-    mockGetDrafts.mockResolvedValue({ data: { drafts: [] } });
+    mockGetMotion.mockResolvedValue(mockMotion);
+    mockGetDrafts.mockResolvedValue([]);
     mockEvidenceList.mockResolvedValue(twoEvidence);
   });
 

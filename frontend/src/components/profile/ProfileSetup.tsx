@@ -104,7 +104,8 @@ export const ProfileSetup: React.FC = () => {
       const processedData = {
         ...data,
         is_petitioner: data.is_petitioner === 'true' || data.is_petitioner === true,
-        children_info: children,
+        // Drop "Add Child" rows the user never filled in
+        children_info: children.filter((child) => (child.name || '').trim() !== ''),
         // Ensure dates are properly formatted
         marriage_date: data.marriage_date || undefined,
         separation_date: data.separation_date || undefined

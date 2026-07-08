@@ -24,7 +24,9 @@ export const CaseIntake: React.FC = () => {
     }
   });
 
-  const hasExistingGameplan = watch('hasExistingGameplan');
+  // Radio values arrive from react-hook-form as the strings "true"/"false";
+  // passing those straight to checked= makes "false" truthy
+  const hasExistingGameplan = String(watch('hasExistingGameplan')) === 'true';
 
   const setHasExistingGameplan = (value: boolean) => {
     setValue('hasExistingGameplan', value);

@@ -174,9 +174,9 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       }
 
       if (motionId) {
-        const draftsResponse = await (motionAPI as any).getDrafts(motionId);
-        const savedDraft = draftsResponse.data.drafts.find(
-          (d: any) => d.step_number === stepNumber
+        const drafts = await motionAPI.getDrafts(motionId);
+        const savedDraft = (drafts || []).find(
+          (d) => d.step_number === stepNumber
         );
         if (savedDraft) {
           reset(savedDraft.question_data);
@@ -221,7 +221,11 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
 
   const onSubmit = async (data: any) => {
     try {
-      await (motionAPI as any).saveDraft(motionId!, currentStep, data);
+      await motionAPI.saveDraft(motionId!, {
+        step_number: currentStep,
+        step_name: stepData?.step_name || `step_${currentStep}`,
+        question_data: data,
+      });
       setAllAnswers({ ...allAnswers, ...data });
 
       if (currentStep < totalSteps) {
@@ -234,7 +238,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       let llmFailed = false;
 
       try {
-        await (motionAPI as any).processWithLLM(motionId!);
+        await motionAPI.processWithLLM(motionId!);
       } catch (llmError) {
         console.error('LLM processing failed, proceeding with user words:', llmError);
         llmFailed = true;
@@ -246,9 +250,10 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
         onComplete(motionId!);
       }
 
-      // If launched from FormExecution, navigate back to signal completion
+      // If launched from FormExecution, navigate back to signal completion.
+      // FormExecution is mounted at /case/forms — there is no /form/execution route.
       if (locationState?.fromFormExecution) {
-        navigate('/form/execution', {
+        navigate('/case/forms', {
           state: {
             ...locationState,
             completedFormIndex: locationState.formExecutionFormIndex,

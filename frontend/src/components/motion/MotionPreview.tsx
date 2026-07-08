@@ -5,12 +5,11 @@ import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, CheckCircleIcon, Excla
 import { format } from 'date-fns';
 
 interface MotionDraft {
-  id: string;
   step_number: number;
   step_name: string;
   question_data: any;
-  llm_output: string;
-  created_at: string;
+  llm_output: string | null;
+  is_complete?: boolean;
 }
 
 interface Motion {
@@ -50,12 +49,13 @@ export const MotionPreview: React.FC = () => {
   const loadMotionData = async () => {
     try {
       setLoading(true);
-      const [motionResponse, draftsResponse] = await Promise.all([
+      // motionAPI helpers return unwrapped data (not axios responses)
+      const [motionData, draftsData] = await Promise.all([
         motionAPI.get(motionId!),
-        (motionAPI as any).getDrafts(motionId!),
+        motionAPI.getDrafts(motionId!),
       ]);
-      setMotion(motionResponse.data);
-      setDrafts(draftsResponse.data.drafts || []);
+      setMotion(motionData);
+      setDrafts(draftsData || []);
       // Load evidence count — non-blocking, never prevents PDF generation
       try {
         const evidenceItems = await evidenceAPI.list(motionId!);
@@ -76,8 +76,8 @@ export const MotionPreview: React.FC = () => {
       setGenerating(true);
       setPdfError(null);
 
-      const response = await (documentAPI as any).generatePDFSync(motionId!);
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const pdfBuffer = await documentAPI.generatePDFSync(motionId!);
+      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
 
       const filename = `${motion?.motion_type || 'motion'}-${motion?.case_number || 'draft'}.pdf`;
@@ -219,7 +219,7 @@ export const MotionPreview: React.FC = () => {
         {/* Motion Sections */}
         <div className="space-y-6">
           {drafts.map((draft) => (
-            <div key={draft.id} className="bg-white shadow rounded-lg">
+            <div key={draft.step_number} className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-900">

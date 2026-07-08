@@ -73,6 +73,50 @@ Build strategy: orchestrator (this session) + Sonnet subagents for implementatio
 - Gmail: stateless OAuth, scan-by-other-party, import as unconfirmed Evidence. OCR: Cloud Vision pre-fill suggestion on upload, user still confirms. Privacy policy + terms pages (/privacy, /terms), docs/GOOGLE_OAUTH_SETUP.md. Backend 244, frontend 161.
 - NO iMessage integration (no platform API exists — screenshots+OCR is the path).
 
+## M5 — E2E bug-fix round (DONE 2026-07-07, from tasks/e2e-test-findings.md)
+Backend (pytest first):
+- [x] M5.1 Route prefixes: violations/evidence routes match frontend calls
+      (/api/v1/violations/tracks, /api/v1/motions/{id}/evidence/upload, /api/v1/evidence/{id});
+      chat-pdf normalized; gmail routes renamed to frontend contract (/gmail/auth-url,
+      /gmail/exchange-code, /motions/{id}/gmail/scan|import)
+- [x] M5.2 Download regenerates via same generate_packet as generate-pdf-sync (correct FL-300);
+      filename uses enum .value; listing `available` truthful
+- [x] M5.3 Async generate-pdf: Motion.case_number crash (case number read from profile)
+- [x] M5.4 llm_service boots with USE_GCP=false (mock fallback, no NameError);
+      mock rewrite/declaration/enhance return the user's words, no placeholder copy
+- [x] M5.5 motions create accepts case-insensitive motion_type; motion responses now
+      include case_number (from profile) for dashboard cards + PDF filenames
+Frontend (Jest):
+- [x] M5.6 GuidedIntake onSubmit: correct saveDraft payload {step_number, step_name, question_data}
+- [x] M5.7 GuidedIntake.loadStep + MotionPreview.loadMotionData: use getDrafts()/get() returns
+      directly (removed `as any` casts; TS now enforces the contract); MotionPreview blob
+      built from ArrayBuffer, not .data
+- [x] M5.8 Case-intake radio: watch() returns "true"/"false" strings — normalized to boolean
+- [x] M5.9 Profile setup: drop empty child rows on save
+- [x] M5.10 Dashboard card case number: fixed via M5.5 (backend now supplies it)
+- [x] M5.14 (found during verify) GuidedIntake returned to /form/execution which matches no
+      route → blank page; now returns to /case/forms where FormExecution is mounted
+Infra:
+- [x] M5.11 run_local.sh: uvicorn app.main:app on port 8000 (main.py never existed)
+Verify:
+- [x] M5.12 Backend 278 passed + 3 xfailed; frontend 163 passed (18 suites)
+- [x] M5.13 Live UI E2E re-run: login → profile → intake → gameplan → guided FL-300 all
+      6 steps → completion screen → dashboard (case # shown) → preview (renders, user
+      words, no MOCK text) → downloaded FL-300-24STFL05678.pdf (131KB, FL-300, no mock
+      copy). Zero console errors, zero failed requests.
+
+### M5 review
+- Root cause cluster 1 (frontend): Jest mocks encoded axios-response shapes ({data: ...})
+  while the api.ts helpers return unwrapped data; components were written against the
+  mocks and every motion view crashed against the real API. Casts of `(motionAPI as any)`
+  hid it from TS. Fixed mocks to real shapes; removed casts so tsc enforces the contract.
+- Root cause cluster 2 (backend): routers included with prefixes the endpoint files
+  already carried → doubled paths the frontend never called; plain-Enum MotionType
+  compared against strings → always-FL-320 downloads and enum-repr filenames.
+- New regression suite: tests/test_e2e_regressions.py (route contract asserted against
+  app.routes, download/packet consistency, llm boot fallback, mock output policy).
+- Tech debt noted: documents.py 397 lines (>300 rule).
+
 ## LAUNCH-BLOCKING (user actions, none are code)
 1. Google OAuth verification — submit gmail.readonly (weeks; test mode works for 100 users now). See docs/GOOGLE_OAUTH_SETUP.md.
 2. ANTHROPIC_API_KEY in .env + USE_CLAUDE=true to switch live drafting to Claude (mock works without).

@@ -1,7 +1,7 @@
 """
 FastAPI main application
 """
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
@@ -10,8 +10,6 @@ import os
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import Base, db, init_db
-from app.core.deps import get_current_user_ws
-from app.services.chat_service import chat_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -71,77 +69,6 @@ async def root():
         "documentation": "/docs",
         "health": "/health"
     }
-
-# WebSocket endpoint for chat
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time chat"""
-    await websocket.accept()
-    user_id = None
-    session_id = None
-
-    try:
-        while True:
-            # Receive message from client
-            data = await websocket.receive_json()
-
-            # Handle different message types
-            message_type = data.get("type")
-
-            if message_type == "connect":
-                # Authenticate user via JWT
-                token = data.get("data", {}).get("token")
-                if not token:
-                    await websocket.close(code=1008)
-                    return
-                from app.core.database import get_db_sync
-                ws_db = get_db_sync()
-                user = await get_current_user_ws(token, ws_db)
-                if user is None:
-                    await websocket.close(code=1008)
-                    return
-                user_id = str(user.id)
-
-                await websocket.send_json({
-                    "type": "connected",
-                    "data": {"message": "Connected to chat service"}
-                })
-
-            elif message_type == "message" and user_id:
-                # Process chat message
-                content = data.get("data", {}).get("content", "")
-
-                if not session_id:
-                    # Create new session if needed
-                    from app.core.database import get_db_sync
-                    from app.services.chat_service import chat_service
-
-                    db = get_db_sync()
-                    result = await chat_service.create_session(
-                        db, user_id, initial_message=content
-                    )
-                    session_id = result["session_id"]
-
-                # Process message
-                response = await chat_service.process_message(
-                    db, session_id, user_id, content
-                )
-
-                # Send response back to client
-                await websocket.send_json({
-                    "type": "message",
-                    "data": {
-                        "content": response["response"]["message"]["content"],
-                        "quick_replies": response["response"].get("quick_replies", []),
-                        "session_id": session_id
-                    }
-                })
-
-    except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for user {user_id}")
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        await websocket.close()
 
 if __name__ == "__main__":
     import uvicorn

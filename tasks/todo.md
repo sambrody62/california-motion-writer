@@ -188,3 +188,21 @@ verification pending ANTHROPIC_API_KEY.
 
 ## Tech debt
 - llm_service.py 634 lines (>300 rule, predates the rule). Split candidates: mock-response strings, prompt builders.
+
+## Remediation: 10 Design-Review Findings (branch fix/known-issues, 2026-07-08)
+
+Plan: ~/.claude/plans/temporal-whistling-engelbart.md. TDD; one conventional commit per step.
+
+- [ ] R1. refactor(api): remove dead WebSocket chat endpoint
+- [ ] R2. refactor(frontend): remove chat entry points and dead chat UI
+- [ ] R3. refactor(auth)!: backend JWT only; delete Firebase layer
+- [ ] R4. fix(intake): edit/resume loads existing motion (no orphan drafts)
+- [ ] R5. fix(intake): surface step save/load failures inline with retry
+- [ ] R6. fix(preview): only claim legal-format rewrite when LLM output exists
+- [ ] R7. fix(gameplan): honest fallback when personalized plan unavailable
+- [ ] R8. fix(copy): replace UPL-risky "legal help/strategy" language
+- [ ] R9. feat(legal): global disclaimer footer; FilingChecklist after PDF download
+- [ ] R10. fix(evidence): delete confirmation + error surfacing
+- [ ] R11. fix(storage): evidence upload fails loudly on backend storage errors
+- [ ] R12. feat(api): enforce rate limits on LLM, PDF, auth routes
+- [ ] R13. fix(logging): strip PII logging; gate SQL echo behind SQL_ECHO

@@ -1,7 +1,6 @@
 """
 Core dependencies for the application
 """
-from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,26 +37,6 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-async def get_current_user_ws(
-    token: str,
-    db: AsyncSession
-) -> Optional[User]:
-    """
-    Get the current authenticated user from JWT token for WebSocket
-    Returns None instead of raising exceptions for WebSocket compatibility
-    """
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            return None
-    except JWTError:
-        return None
-
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
-    return user
-
 async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
@@ -80,7 +59,6 @@ async def get_verified_user(
 __all__ = [
     'get_db',
     'get_current_user',
-    'get_current_user_ws',
     'get_current_active_user',
     'get_verified_user',
     'oauth2_scheme'

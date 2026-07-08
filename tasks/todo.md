@@ -117,11 +117,74 @@ Verify:
   app.routes, download/packet consistency, llm boot fallback, mock output policy).
 - Tech debt noted: documents.py 397 lines (>300 rule).
 
+## M6 — Served-motion upload for FL-320 responses (DONE 2026-07-07)
+Respondents can upload the FL-300 they were served (PDF or photo) as a skippable gate
+before step 1 of the response wizard; the backend extracts text (PyPDF2; Cloud Vision for
+photos when OCR_ENABLED) and the LLM pulls structured facts that pre-fill the wizard with
+a "Filled from your uploaded motion — please verify" indicator. Parse-only (file never
+stored); date_served structurally excluded (user must enter it; deadline calc depends on
+it); mock LLM degrades to a notice + manual entry. New: served_motion_parser.py,
+endpoints/served_motion.py (POST /llm/parse-served-motion), ServedMotionUpload.tsx,
+servedMotionApi.ts, QuestionField.tsx (extracted from GuidedIntake, now 493 lines).
+Suites: backend 311, frontend 173. Live-driven: upload path (gate → notice → wizard) and
+skip path (wizard + deadline banner), curl smoke 200/400/401.
+- Follow-up ticket: scanned-PDF OCR needs Vision batch_annotate_files (current
+  ocr_service only accepts image bytes) — scanned PDFs get an honest "couldn't read
+  this file" notice today.
+- Real-extraction verification pending ANTHROPIC_API_KEY (launch blocker #2).
+
+## M7 — Smart Evidence Finder (DONE 2026-07-07)
+Four workstreams (order D→C→B→A), all TDD, all with mock-LLM graceful degradation:
+- D. Court-ready exhibit formatting (exhibit_formatting.py, mechanical): declarant
+  authentication ("true and correct copy") under the perjury clause, INDEX OF EXHIBITS
+  with verified page numbers, case-caption header on every exhibit page, Page N of M
+  stamps. Supersedes the old "Supporting exhibits:" paragraph.
+- C. Claim-to-exhibit citations (claim_citation_service.py): LLM inserts "(Exhibit X)"
+  inline; zero-drift guardrail (strip-citations + normalized-equality + letter whitelist,
+  20s timeout); any doubt → original text, never blocks PDF.
+- B. Bulk text-screenshot import: POST /motions/{id}/evidence/batch-upload (analysis
+  only, ≤20 png/jpg, persists nothing) → OCR → conversation_threading LLM merge →
+  BulkTextImport/BulkTranscriptReview UI (route /motion/:id/evidence/bulk-import) →
+  single confirm via evidence create with user_confirmed (Bug-2 fix: EvidenceCreate
+  silently dropped user_confirmed).
+- A. Relevance-ranked Gmail scan (evidence_ranking_service.py): candidates ranked
+  against intake claims (metadata only — bodies never reach the prompt), score/why/
+  suggested-tag chips in GmailCallback, import accepts tags_by_message (validated);
+  imports stay unconfirmed. Also fixed Bug-1: scan returned a bare array while the
+  frontend expected {emails} (Jest mock had hidden it).
+- Shared: llm_json.py (parse_llm_json extracted), 3 new Claude operations registered.
+- Suites: backend 360 passed + 3 xfailed; frontend 184 passed. Live drive: bulk import
+  (OCR-off degraded path: notice → manual transcript → tag → confirm) → evidence saved
+  → packet downloaded with authentication text, INDEX OF EXHIBITS, caption headers,
+  page stamps, transcript in Exhibit A. Zero console errors / failed requests.
+- Real-LLM quality passes (ranking, threading, citation fallback rate) pending
+  ANTHROPIC_API_KEY (launch blocker #2).
+
+## M8 — Claude vision for chat screenshots (DONE 2026-07-08)
+Bulk screenshot import now reads chat bubbles directly with Claude vision when the
+Claude backend is live: ClaudeLLMService.generate_with_images (base64 image blocks,
+screenshot_reading op on haiku, 6000 tokens), text_thread_service.read_screenshot_images
+(bubble-side sender attribution in the prompt; sanitized JSON; returns None on any
+failure), evidence_batch tries vision first with size guards (4.5MB/image excluded,
+20MB/batch skips vision) then falls back to OCR+threading, then manual. Response schema
+unchanged — zero frontend changes. Suites: backend 370, frontend 184. Live re-drive of
+the evidence flow: identical to M7's verified behavior (no regression). Vision quality
+verification pending ANTHROPIC_API_KEY.
+
+## DEPLOY CHECKLIST — Supabase evidence storage (config only, code complete)
+1. Supabase dashboard → Storage → create bucket `evidence` → **Private** (never public;
+   legal evidence).
+2. Render dashboard → env secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY (render.yaml
+   already sets STORAGE_BACKEND=supabase and SUPABASE_EVIDENCE_BUCKET=evidence).
+3. Post-deploy smoke: upload one evidence file; its storage_path must start
+   `supabase://evidence/`. Free tier = 1 GB (~hundreds of exhibits); Pro $25/mo = 100 GB.
+4. Later, if a "view original file" feature is added: serve via time-limited signed URLs.
+
 ## LAUNCH-BLOCKING (user actions, none are code)
 1. Google OAuth verification — submit gmail.readonly (weeks; test mode works for 100 users now). See docs/GOOGLE_OAUTH_SETUP.md.
-2. ANTHROPIC_API_KEY in .env + USE_CLAUDE=true to switch live drafting to Claude (mock works without).
+2. ANTHROPIC_API_KEY in .env + USE_CLAUDE=true to switch live drafting to Claude (mock works without). Now also unlocks: evidence ranking, screenshot threading, claim citations, and vision reading of chat screenshots.
 3. Attorney review of privacy policy + terms (PRD hard blocker OD6) — pages carry visible "pending review" notices.
-4. Staging deploy (needs go-ahead — touches GCP bill + live URL).
+4. Staging deploy (needs go-ahead — touches Render/Vercel/Supabase; see deploy checklist above).
 
 ## Tech debt
 - llm_service.py 634 lines (>300 rule, predates the rule). Split candidates: mock-response strings, prompt builders.

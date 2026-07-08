@@ -39,6 +39,8 @@ class EvidenceCreate(BaseModel):
     source_date: Optional[date] = None
     description: str
     transcription: Optional[str] = None
+    # The bulk-import review screen confirms in the same step as creation
+    user_confirmed: bool = False
 
 
 class EvidenceUpdate(BaseModel):
@@ -141,6 +143,7 @@ async def create_evidence(
         source_date=payload.source_date,
         description=payload.description,
         transcription=payload.transcription,
+        user_confirmed=payload.user_confirmed,
     )
     db.add(ev)
     await db.commit()

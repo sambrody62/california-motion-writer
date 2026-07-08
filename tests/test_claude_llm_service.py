@@ -44,6 +44,14 @@ class TestOperationRouting:
         for op in ("chat_response", "intent_classification", "upl_check"):
             assert OPERATION_MODELS[op] == CHAT_MODEL
 
+    def test_evidence_finder_operations_registered(self):
+        assert OPERATION_MODELS["evidence_ranking"] == CHAT_MODEL
+        assert OPERATION_MODELS["conversation_threading"] == CHAT_MODEL
+        assert OPERATION_MODELS["claim_citation"] == DRAFTING_MODEL
+        assert OPERATION_MAX_TOKENS["evidence_ranking"] == 2000
+        assert OPERATION_MAX_TOKENS["conversation_threading"] == 6000
+        assert OPERATION_MAX_TOKENS["claim_citation"] == 6000
+
     def test_default_model_ids(self):
         assert DRAFTING_MODEL == "claude-sonnet-4-6"
         assert CHAT_MODEL == "claude-haiku-4-5"
@@ -166,3 +174,36 @@ class TestValidateOutputUPLFlags:
             "1. I, John Smith, declare as follows. " + self._filler()
         )
         assert result["upl_flags"] == []
+
+
+class TestGenerateWithImages:
+    def test_screenshot_reading_operation_registered(self):
+        assert OPERATION_MODELS["screenshot_reading"] == CHAT_MODEL
+        assert OPERATION_MAX_TOKENS["screenshot_reading"] == 6000
+
+    @pytest.mark.asyncio
+    async def test_builds_image_blocks_then_text_block(self):
+        import base64
+
+        service, client = _service_with_mock_client('{"transcript": "ok"}')
+        images = [(b"png-bytes", "image/png"), (b"jpg-bytes", "image/jpeg")]
+
+        text, tokens, model = await service.generate_with_images(
+            "Read these screenshots", images, "screenshot_reading"
+        )
+
+        assert text == '{"transcript": "ok"}'
+        assert tokens == 150
+        call = client.messages.create.call_args
+        assert call.kwargs["model"] == CHAT_MODEL
+        assert call.kwargs["max_tokens"] == 6000
+        assert call.kwargs["system"] == service._system_blocks()
+
+        content = call.kwargs["messages"][0]["content"]
+        assert len(content) == 3
+        assert content[0]["type"] == "image"
+        assert content[0]["source"]["type"] == "base64"
+        assert content[0]["source"]["media_type"] == "image/png"
+        assert base64.b64decode(content[0]["source"]["data"]) == b"png-bytes"
+        assert content[1]["source"]["media_type"] == "image/jpeg"
+        assert content[2] == {"type": "text", "text": "Read these screenshots"}

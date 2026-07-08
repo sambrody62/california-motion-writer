@@ -333,16 +333,26 @@ export const gmailEvidenceAPI = {
       from: string;
       date: string;
       snippet: string;
+      relevance_score?: number;
+      relevance_reason?: string;
+      suggested_tags?: string[];
     }>;
+    ranking_notice: string | null;
   }> => {
     const response = await api.post(`/motions/${motionId}/gmail/scan`, { access_token: accessToken });
     return response.data;
   },
 
-  import: async (motionId: string, accessToken: string, messageIds: string[]): Promise<{ imported: number }> => {
+  import: async (
+    motionId: string,
+    accessToken: string,
+    messageIds: string[],
+    tagsByMessage?: Record<string, string[]>
+  ): Promise<{ imported: number }> => {
     const response = await api.post(`/motions/${motionId}/gmail/import`, {
       access_token: accessToken,
       message_ids: messageIds,
+      tags_by_message: tagsByMessage,
     });
     return response.data;
   },

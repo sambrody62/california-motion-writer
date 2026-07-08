@@ -350,7 +350,7 @@ async def test_packet_without_evidence_page_count_unchanged():
 
 @pytest.mark.asyncio
 async def test_packet_exhibit_declaration_has_supporting_paragraph():
-    """Declaration text must include 'Supporting exhibits:' when evidence is present."""
+    """Declaration must authenticate exhibits when evidence is present."""
     motion = _make_motion_stub("RFO")
     profile = _make_profile_stub()
     sections = _make_llm_sections("Respondent has violated the custody order.")
@@ -359,4 +359,4 @@ async def test_packet_exhibit_declaration_has_supporting_paragraph():
     packet = await generate_packet(motion, profile, sections, evidence=evidence)
     text = _extract_text(packet)
 
-    assert "Supporting exhibits:" in text
+    assert "true and correct copy" in text

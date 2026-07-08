@@ -341,7 +341,7 @@ async def test_packet_with_evidence_declaration_has_supporting_exhibits():
 
     packet = await generate_packet(motion, profile, sections, evidence=evidence)
     text = _extract_text(packet)
-    assert "Supporting exhibits:" in text
+    assert "Attached hereto as Exhibit A" in text
 
 
 @pytest.mark.asyncio
@@ -378,3 +378,25 @@ async def test_packet_unconfirmed_evidence_excluded():
     assert len(reader_no.pages) == len(reader_unc.pages), (
         "Unconfirmed evidence must not add pages to the packet"
     )
+
+
+@pytest.mark.asyncio
+async def test_packet_contains_authentication_and_index():
+    """Court-ready formatting: authentication language in the declaration,
+    INDEX OF EXHIBITS, caption headers, and page stamps in the exhibit packet."""
+    motion = _make_motion_stub()
+    profile = _make_profile_stub()
+    sections = _make_llm_sections()
+    evidence = [_make_evidence(user_confirmed=True, tags=["non_payment"])]
+
+    packet = await generate_packet(motion, profile, sections, evidence=evidence)
+
+    import io as _io
+    import PyPDF2 as _pypdf
+    reader = _pypdf.PdfReader(_io.BytesIO(packet))
+    text = "\n".join((p.extract_text() or "") for p in reader.pages)
+
+    assert "true and correct copy" in text
+    assert "Attached hereto as Exhibit A" in text
+    assert "INDEX OF EXHIBITS" in text
+    assert "Page 1 of" in text

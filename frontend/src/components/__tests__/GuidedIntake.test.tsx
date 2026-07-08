@@ -22,6 +22,13 @@ jest.mock('react-router-dom', () => ({
   useLocation: () => mockUseLocation(),
 }));
 
+const mockServedParse = jest.fn();
+jest.mock('../../services/servedMotionApi', () => ({
+  servedMotionAPI: {
+    parse: (...args: any[]) => mockServedParse(...args),
+  },
+}));
+
 jest.mock('../../types/forms', () => ({
   FORM_METADATA: { FL_300: { name: 'Request for Order', id: 'FL-300' } },
   FORM_TYPES: { FL_300: 'FL_300' },
@@ -307,6 +314,9 @@ describe('GuidedIntake — FL-320 deadline warning', () => {
   test('shows deadline warning when date_served is filled in on an FL-320 form', async () => {
     renderWithRouter(<GuidedIntake />);
 
+    // Skip past the upload gate to reach the form
+    fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
+
     await waitFor(() => {
       expect(screen.getByLabelText(/Date You Were Served/i)).toBeInTheDocument();
     });
@@ -324,6 +334,8 @@ describe('GuidedIntake — FL-320 deadline warning', () => {
   test('deadline warning contains computed date after service date input', async () => {
     renderWithRouter(<GuidedIntake />);
 
+    fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
+
     await waitFor(() => {
       expect(screen.getByLabelText(/Date You Were Served/i)).toBeInTheDocument();
     });
@@ -340,6 +352,8 @@ describe('GuidedIntake — FL-320 deadline warning', () => {
 
   test('no deadline warning shown when date_served is empty', async () => {
     renderWithRouter(<GuidedIntake />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
 
     await waitFor(() => {
       expect(screen.getByLabelText(/Date You Were Served/i)).toBeInTheDocument();
@@ -572,6 +586,128 @@ describe('GuidedIntake — FL-150 conditional income fields', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Last Year Net Income/i)).toBeInTheDocument();
+    });
+  });
+});
+
+// -------------------------------------------------------------------
+// FL-320 upload gate ("upload the motion you were served")
+// -------------------------------------------------------------------
+
+const MOCK_FL320_GATE_STEP = {
+  id: 'FL_320_step_1',
+  step_number: 1,
+  step_name: 'Case Information',
+  description: 'Confirm the case information from the original request',
+  questions: [
+    { id: 'case_number', type: 'text', label: 'Case Number', required: true },
+    { id: 'date_served', type: 'date', label: 'Date You Were Served', required: true },
+    { id: 'other_party_requests', type: 'textarea', label: 'What did the other party request?', required: true },
+  ],
+  total_steps: 3,
+};
+
+describe('GuidedIntake — FL-320 upload gate', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFormType = 'FL-320';
+    mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
+    mockCreate.mockResolvedValue({ id: 'motion-789' });
+    mockGetDrafts.mockResolvedValue([]);
+    mockSaveDraft.mockResolvedValue({ success: true });
+    mockProcessWithLLM.mockResolvedValue({ success: true });
+    mockGetQuestions.mockResolvedValue({ data: MOCK_FL320_GATE_STEP });
+    mockSaveAnswer.mockResolvedValue({ success: true });
+    mockEvaluateCondition.mockResolvedValue({ data: { result: true } });
+    mockGetProfile.mockResolvedValue({});
+    mockServedParse.mockResolvedValue({
+      success: true,
+      extracted: {
+        case_number: '24STFL01234',
+        other_party_requests: 'Sole custody and child support',
+      },
+      notice: null,
+    });
+  });
+
+  afterEach(() => {
+    mockFormType = 'FL_300';
+  });
+
+  test('gate renders before the form for FL-320', async () => {
+    renderWithRouter(<GuidedIntake />);
+
+    expect(await screen.findByText(/motion you were served/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Case Number/i)).not.toBeInTheDocument();
+  });
+
+  test('gate does not render for FL-300', async () => {
+    mockFormType = 'FL_300';
+    mockGetQuestions.mockResolvedValue({ data: MOCK_STEP_DATA });
+    renderWithRouter(<GuidedIntake />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Your Name/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/motion you were served/i)).not.toBeInTheDocument();
+  });
+
+  test('skip proceeds to step 1 without parsing', async () => {
+    renderWithRouter(<GuidedIntake />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Case Number/i)).toBeInTheDocument();
+    });
+    expect(mockServedParse).not.toHaveBeenCalled();
+  });
+
+  test('extracted values pre-fill the form with a verify indicator; date_served stays empty', async () => {
+    renderWithRouter(<GuidedIntake />);
+
+    const input = (await screen.findByLabelText(/upload/i)) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['%PDF'], 'served.pdf', { type: 'application/pdf' })] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Case Number/i)).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      const caseInput = screen.getByLabelText(/Case Number/i) as HTMLInputElement;
+      expect(caseInput.value).toBe('24STFL01234');
+    });
+    const requestsInput = screen.getByLabelText(/other party request/i) as HTMLTextAreaElement;
+    expect(requestsInput.value).toBe('Sole custody and child support');
+
+    const dateInput = screen.getByLabelText(/Date You Were Served/i) as HTMLInputElement;
+    expect(dateInput.value).toBe('');
+
+    expect(
+      screen.getAllByText(/Filled from your uploaded motion/i).length
+    ).toBeGreaterThan(0);
+  });
+
+  test('empty extraction shows the notice banner on step 1', async () => {
+    mockServedParse.mockResolvedValue({
+      success: true,
+      extracted: {},
+      notice: 'Automatic extraction is not available right now.',
+    });
+    renderWithRouter(<GuidedIntake />);
+
+    const input = (await screen.findByLabelText(/upload/i)) as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['%PDF'], 'served.pdf', { type: 'application/pdf' })] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Case Number/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Automatic extraction is not available right now/i)
+      ).toBeInTheDocument();
     });
   });
 });

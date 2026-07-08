@@ -73,15 +73,25 @@ export const EvidenceManager: React.FC = () => {
               Evidence &amp; Exhibits
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
-            aria-label="Add evidence"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Add evidence
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/motion/${motionId}/evidence/bulk-import`)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100"
+              aria-label="Import text screenshots"
+            >
+              Import text screenshots
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              aria-label="Add evidence"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add evidence
+            </button>
+          </div>
         </div>
 
         {/* Add form */}

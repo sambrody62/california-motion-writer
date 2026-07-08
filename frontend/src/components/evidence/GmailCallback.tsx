@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { gmailEvidenceAPI } from '../../services/api';
+import { TAG_LABELS } from './evidenceTypes';
 
 interface EmailCandidate {
   message_id: string;
@@ -8,7 +9,13 @@ interface EmailCandidate {
   from: string;
   date: string;
   snippet: string;
+  relevance_score?: number;
+  relevance_reason?: string;
+  suggested_tags?: string[];
 }
+
+const byRelevance = (a: EmailCandidate, b: EmailCandidate) =>
+  (b.relevance_score ?? -1) - (a.relevance_score ?? -1);
 
 export const GmailCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -17,7 +24,9 @@ export const GmailCallback: React.FC = () => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [motionId, setMotionId] = useState<string | null>(null);
   const [emails, setEmails] = useState<EmailCandidate[]>([]);
+  const [rankingNotice, setRankingNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [tagsByMessage, setTagsByMessage] = useState<Record<string, string[]>>({});
   const [status, setStatus] = useState<'loading' | 'selecting' | 'importing' | 'done' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -37,8 +46,14 @@ export const GmailCallback: React.FC = () => {
         setAccessToken(access_token);
         setMotionId(state);
 
-        const { emails: candidates } = await gmailEvidenceAPI.scan(state ?? '', access_token);
-        setEmails(candidates);
+        const { emails: candidates, ranking_notice } = await gmailEvidenceAPI.scan(state ?? '', access_token);
+        setEmails([...candidates].sort(byRelevance));
+        setRankingNotice(ranking_notice);
+        const seededTags: Record<string, string[]> = {};
+        candidates.forEach((c) => {
+          if (c.suggested_tags?.length) seededTags[c.message_id] = c.suggested_tags;
+        });
+        setTagsByMessage(seededTags);
         setStatus('selecting');
       } catch (err) {
         setStatus('error');
@@ -61,11 +76,23 @@ export const GmailCallback: React.FC = () => {
     });
   };
 
+  const removeTag = (messageId: string, tag: string) => {
+    setTagsByMessage(prev => ({
+      ...prev,
+      [messageId]: (prev[messageId] || []).filter(t => t !== tag),
+    }));
+  };
+
   const handleImport = async () => {
     if (!motionId || !accessToken || selected.size === 0) return;
     setStatus('importing');
     try {
-      await gmailEvidenceAPI.import(motionId, accessToken, Array.from(selected));
+      const ids = Array.from(selected);
+      const tags: Record<string, string[]> = {};
+      ids.forEach((id) => {
+        if (id in tagsByMessage) tags[id] = tagsByMessage[id];
+      });
+      await gmailEvidenceAPI.import(motionId, accessToken, ids, tags);
       navigate(`/motion/${motionId}/evidence`);
     } catch (err) {
       setStatus('error');
@@ -93,9 +120,14 @@ export const GmailCallback: React.FC = () => {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-xl font-semibold text-gray-900 mb-2">Select emails to import as evidence</h1>
-        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 mb-5">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
           Imported emails are saved as unconfirmed — review and confirm each before it becomes an exhibit.
         </p>
+        {rankingNotice && (
+          <p className="text-sm text-gray-700 bg-gray-100 border border-gray-200 rounded-md p-3 mb-3">
+            {rankingNotice}
+          </p>
+        )}
 
         {emails.length === 0 ? (
           <p className="text-gray-500 text-sm">No relevant emails found.</p>
@@ -111,11 +143,40 @@ export const GmailCallback: React.FC = () => {
                   className="mt-0.5 rounded border-gray-300 text-indigo-600"
                   aria-label={email.subject}
                 />
-                <label htmlFor={`email-${email.message_id}`} className="flex-1 cursor-pointer">
-                  <p className="text-sm font-medium text-gray-900">{email.subject}</p>
-                  <p className="text-xs text-gray-500">{email.from} · {email.date}</p>
-                  <p className="text-xs text-gray-600 mt-0.5">{email.snippet}</p>
-                </label>
+                <div className="flex-1">
+                  <label htmlFor={`email-${email.message_id}`} className="block cursor-pointer">
+                    <p className="text-sm font-medium text-gray-900">
+                      {email.subject}
+                      {typeof email.relevance_score === 'number' && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          {Math.round(email.relevance_score * 100)}% match
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500">{email.from} · {email.date}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{email.snippet}</p>
+                    {email.relevance_reason && (
+                      <p className="text-xs text-indigo-600 mt-0.5">{email.relevance_reason}</p>
+                    )}
+                  </label>
+                  {(tagsByMessage[email.message_id] || []).length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {tagsByMessage[email.message_id].map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => removeTag(email.message_id, tag)}
+                          aria-label={`remove tag ${TAG_LABELS[tag as keyof typeof TAG_LABELS] ?? tag}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-200"
+                          title="Click to remove this tag"
+                        >
+                          {TAG_LABELS[tag as keyof typeof TAG_LABELS] ?? tag}
+                          <span aria-hidden="true">×</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

@@ -8,9 +8,10 @@ Routes operations to the right model tier:
 The stable system prompt (base prompt + UPL guardrails) is cached via
 prompt caching; per-request content goes in the user message.
 """
+import base64
 import logging
 import os
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,12 @@ OPERATION_MODELS = {
     "declaration": DRAFTING_MODEL,
     "best_interests": DRAFTING_MODEL,
     "complete_motion": DRAFTING_MODEL,
+    "served_motion_extraction": CHAT_MODEL,
+    "evidence_ranking": CHAT_MODEL,
+    "conversation_threading": CHAT_MODEL,
+    "screenshot_reading": CHAT_MODEL,
+    # Verbatim reproduction fidelity matters for citations — use the drafting tier
+    "claim_citation": DRAFTING_MODEL,
 }
 
 # Mirrors the per-operation output limits used by the Vertex backend
@@ -36,6 +43,11 @@ OPERATION_MAX_TOKENS = {
     "declaration": 4000,
     "best_interests": 3000,
     "complete_motion": 6000,
+    "served_motion_extraction": 1024,
+    "evidence_ranking": 2000,
+    "conversation_threading": 6000,
+    "screenshot_reading": 6000,
+    "claim_citation": 6000,
 }
 
 # PRD compliance section C3: the line between legal information (allowed)
@@ -87,6 +99,41 @@ class ClaudeLLMService:
             max_tokens=OPERATION_MAX_TOKENS.get(operation, 3000),
             system=self._system_blocks(),
             messages=[{"role": "user", "content": prompt}],
+        )
+        text = next((b.text for b in response.content if b.type == "text"), "")
+        tokens = response.usage.input_tokens + response.usage.output_tokens
+        return text, tokens, model
+
+    async def generate_with_images(
+        self,
+        prompt: str,
+        images: List[Tuple[bytes, str]],
+        operation: str,
+        user_id: Optional[str] = None,
+    ) -> Tuple[str, int, str]:
+        """Generate from images + text (e.g. chat screenshots).
+
+        images: list of (raw_bytes, media_type). Returns (text, total_tokens, model_id).
+        """
+        client = self._get_client()
+        model = OPERATION_MODELS.get(operation, CHAT_MODEL)
+        content = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": base64.b64encode(raw).decode("ascii"),
+                },
+            }
+            for raw, media_type in images
+        ]
+        content.append({"type": "text", "text": prompt})
+        response = await client.messages.create(
+            model=model,
+            max_tokens=OPERATION_MAX_TOKENS.get(operation, 3000),
+            system=self._system_blocks(),
+            messages=[{"role": "user", "content": content}],
         )
         text = next((b.text for b in response.content if b.type == "text"), "")
         tokens = response.usage.input_tokens + response.usage.output_tokens

@@ -30,15 +30,17 @@ jest.mock('../../services/api', () => ({
 import { GmailCallback } from '../evidence/GmailCallback';
 
 const sampleEmails = [
-  { message_id: 'msg-1', subject: 'Kids pickup tomorrow', from: 'other@example.com', date: '2024-03-01', snippet: 'I will not be there...' },
-  { message_id: 'msg-2', subject: 'Payment overdue', from: 'other@example.com', date: '2024-04-15', snippet: 'I refuse to pay...' },
+  { message_id: 'msg-1', subject: 'Kids pickup tomorrow', from: 'other@example.com', date: '2024-03-01', snippet: 'I will not be there...',
+    relevance_score: 0.4, relevance_reason: 'Mentions a pickup', suggested_tags: ['custody_violation'] },
+  { message_id: 'msg-2', subject: 'Payment overdue', from: 'other@example.com', date: '2024-04-15', snippet: 'I refuse to pay...',
+    relevance_score: 0.9, relevance_reason: 'Refusal to pay support', suggested_tags: ['non_payment'] },
 ];
 
 describe('GmailCallback', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockExchangeCode.mockResolvedValue({ access_token: 'tok-123' });
-    mockScan.mockResolvedValue({ emails: sampleEmails });
+    mockScan.mockResolvedValue({ emails: sampleEmails, ranking_notice: null });
   });
 
   test('exchanges code and shows candidate email list', async () => {
@@ -72,9 +74,8 @@ describe('GmailCallback', () => {
       expect(screen.getByText('Kids pickup tomorrow')).toBeInTheDocument();
     });
 
-    // Select the first email checkbox
-    const checkboxes = screen.getAllByRole('checkbox');
-    fireEvent.click(checkboxes[0]);
+    // Select a specific email (the list is sorted by relevance)
+    fireEvent.click(screen.getByLabelText('Kids pickup tomorrow'));
 
     fireEvent.click(screen.getByRole('button', { name: /import selected/i }));
 
@@ -82,7 +83,8 @@ describe('GmailCallback', () => {
       expect(mockImport).toHaveBeenCalledWith(
         'm1',
         'tok-123',
-        expect.arrayContaining(['msg-1'])
+        expect.arrayContaining(['msg-1']),
+        expect.any(Object)
       );
     });
   });
@@ -102,6 +104,82 @@ describe('GmailCallback', () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalled();
+    });
+  });
+});
+
+
+describe('GmailCallback — relevance ranking', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockExchangeCode.mockResolvedValue({ access_token: 'tok-123' });
+    mockScan.mockResolvedValue({ emails: sampleEmails, ranking_notice: null });
+  });
+
+  test('sorts emails by relevance score, highest first', async () => {
+    render(<GmailCallback />);
+    await waitFor(() => {
+      expect(screen.getByText('Payment overdue')).toBeInTheDocument();
+    });
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('Payment overdue');
+    expect(items[1]).toHaveTextContent('Kids pickup tomorrow');
+  });
+
+  test('shows the relevance reason and suggested tag chips', async () => {
+    render(<GmailCallback />);
+    await waitFor(() => {
+      expect(screen.getByText(/Refusal to pay support/i)).toBeInTheDocument();
+      expect(screen.getByText(/Missed payment/i)).toBeInTheDocument();
+    });
+  });
+
+  test('shows ranking notice banner when ranking is unavailable', async () => {
+    mockScan.mockResolvedValue({
+      emails: sampleEmails.map(({ relevance_score, relevance_reason, suggested_tags, ...e }) => e),
+      ranking_notice: 'Relevance ranking is not available right now.',
+    });
+    render(<GmailCallback />);
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Relevance ranking is not available/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  test('import sends suggested tags for selected messages', async () => {
+    mockImport.mockResolvedValue([]);
+    render(<GmailCallback />);
+    await waitFor(() => {
+      expect(screen.getByText('Payment overdue')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Payment overdue'));
+    fireEvent.click(screen.getByRole('button', { name: /import selected/i }));
+
+    await waitFor(() => {
+      expect(mockImport).toHaveBeenCalledWith(
+        'm1',
+        'tok-123',
+        ['msg-2'],
+        { 'msg-2': ['non_payment'] }
+      );
+    });
+  });
+
+  test('clicking a suggested tag chip removes it from the import tags', async () => {
+    mockImport.mockResolvedValue([]);
+    render(<GmailCallback />);
+    await waitFor(() => {
+      expect(screen.getByText('Payment overdue')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText('Payment overdue'));
+    fireEvent.click(screen.getByRole('button', { name: /remove tag Missed payment/i }));
+    fireEvent.click(screen.getByRole('button', { name: /import selected/i }));
+
+    await waitFor(() => {
+      expect(mockImport).toHaveBeenCalledWith('m1', 'tok-123', ['msg-2'], { 'msg-2': [] });
     });
   });
 });

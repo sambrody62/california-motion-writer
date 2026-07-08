@@ -15,11 +15,9 @@ from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 import PyPDF2
 
 from app.services.pdf_service import PDFService
-from app.services.exhibit_assembly_service import (
-    assign_exhibit_letters,
-    build_exhibit_pages,
-    insert_exhibit_references,
-)
+from app.services.claim_citation_service import insert_claim_citations
+from app.services.exhibit_assembly_service import assign_exhibit_letters
+from app.services.exhibit_formatting import build_authentication_text, build_exhibit_packet
 
 _pdf_svc = PDFService()
 
@@ -214,7 +212,10 @@ async def generate_packet(
             s["rewritten_text"] for s in llm_sections if s.get("rewritten_text", "").strip()
         )
         if lettered:
-            declaration_text = insert_exhibit_references(declaration_text, lettered)
+            # Inline citations first (falls back to unchanged text on any doubt),
+            # then authenticate every exhibit under the declaration's perjury clause
+            declaration_text = await insert_claim_citations(declaration_text, lettered)
+            declaration_text = declaration_text + "\n\n" + build_authentication_text(lettered)
         mc030_bytes = await _fill_mc030(profile, declaration_text)
         parts.append(mc030_bytes)
 
@@ -224,9 +225,13 @@ async def generate_packet(
         fl150_bytes = await _fill_fl150(profile)
         parts.append(fl150_bytes)
 
-    # 4. Exhibit pages appended last
+    # 4. Exhibit packet (index + caption headers + page stamps) appended last
     if lettered:
-        exhibit_bytes = build_exhibit_pages(lettered)
-        parts.append(exhibit_bytes)
+        caption = {
+            "case_number": str(profile.case_number or ""),
+            "party_name": profile.party_name,
+            "other_party_name": profile.other_party_name,
+        }
+        parts.append(build_exhibit_packet(lettered, caption))
 
     return _merge_pdfs(parts)

@@ -150,13 +150,17 @@ async def test_scan_returns_candidates(client: AsyncClient, auth_headers: dict, 
         )
 
     assert resp.status_code == 200
-    results = resp.json()
+    body = resp.json()
+    # Wrapped shape — matches what the frontend expects (gmailEvidenceAPI.scan)
+    results = body["emails"]
     assert isinstance(results, list)
     assert len(results) == 1
     assert results[0]["message_id"] == "abc123"
     # snippet present, full body NOT returned in scan
     assert "snippet" in results[0]
     assert "body_text" not in results[0]
+    # Under the mock LLM, candidates come back unranked with a notice
+    assert body["ranking_notice"]
 
 
 async def test_scan_enforces_ownership(client: AsyncClient, auth_headers: dict, gmail_env):
@@ -298,3 +302,45 @@ async def test_gmail_service_get_auth_url():
         from app.services import gmail_evidence_service
         url = gmail_evidence_service.get_auth_url()
         assert url.startswith("https://")
+
+
+@pytest.mark.asyncio
+async def test_import_applies_tags_by_message(client: AsyncClient, auth_headers: dict, gmail_env):
+    motion_id = await _create_motion(client, auth_headers)
+    with patch(
+        "app.services.gmail_evidence_service.fetch_bodies",
+        return_value=MOCK_BODIES,
+    ):
+        resp = await client.post(
+            f"/api/v1/motions/{motion_id}/gmail/import",
+            json={
+                "access_token": "ya29.tok",
+                "message_ids": ["abc123"],
+                "tags_by_message": {"abc123": ["custody_violation"]},
+            },
+            headers=auth_headers,
+        )
+    assert resp.status_code == 201, resp.text
+    item = resp.json()[0]
+    assert item["tags"] == ["custody_violation"]
+    # Suggested tags never make evidence exhibit-eligible on their own
+    assert item["user_confirmed"] is False
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_invalid_tag(client: AsyncClient, auth_headers: dict, gmail_env):
+    motion_id = await _create_motion(client, auth_headers)
+    with patch(
+        "app.services.gmail_evidence_service.fetch_bodies",
+        return_value=MOCK_BODIES,
+    ):
+        resp = await client.post(
+            f"/api/v1/motions/{motion_id}/gmail/import",
+            json={
+                "access_token": "ya29.tok",
+                "message_ids": ["abc123"],
+                "tags_by_message": {"abc123": ["not_a_real_tag"]},
+            },
+            headers=auth_headers,
+        )
+    assert resp.status_code == 400

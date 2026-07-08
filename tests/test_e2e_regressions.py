@@ -45,6 +45,15 @@ class TestFrontendRouteContract:
         assert "/api/v1/chat-pdf/prepare-motion" in paths
         assert not any(p.startswith("/api/v1/chat-pdf/chat-pdf") for p in paths)
 
+    def test_served_motion_route_matches_frontend(self):
+        paths = _route_paths()
+        assert "/api/v1/llm/parse-served-motion" in paths
+        assert not any(p.startswith("/api/v1/llm/llm/") for p in paths)
+
+    def test_evidence_batch_route_matches_frontend(self):
+        paths = _route_paths()
+        assert "/api/v1/motions/{motion_id}/evidence/batch-upload" in paths
+
 
 class TestMotionTypeCaseInsensitive:
     @pytest.mark.asyncio

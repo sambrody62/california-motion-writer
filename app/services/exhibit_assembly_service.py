@@ -61,6 +61,58 @@ def assign_exhibit_letters(evidence: List[dict]) -> List[Tuple[str, dict]]:
     return [(_exhibit_letter(i), item) for i, (_, item) in enumerate(indexed)]
 
 
+def _exhibit_styles():
+    styles = getSampleStyleSheet()
+    heading_style = ParagraphStyle(
+        "ExhibitHeading",
+        parent=styles["Heading1"],
+        fontSize=16,
+        spaceAfter=12,
+        alignment=1,  # center
+    )
+    sub_style = ParagraphStyle(
+        "ExhibitSub",
+        parent=styles["Normal"],
+        fontSize=11,
+        spaceAfter=6,
+    )
+    return styles, heading_style, sub_style
+
+
+def _exhibit_story(letter_str: str, item: dict) -> list:
+    """Flowables for a single exhibit (no trailing PageBreak).
+
+    Shared by build_exhibit_pages and exhibit_formatting.build_exhibit_packet.
+    """
+    styles, heading_style, sub_style = _exhibit_styles()
+    body_style = styles["Normal"]
+
+    story = [Paragraph(f"EXHIBIT {letter_str}", heading_style)]
+
+    date_val = item.get("source_date") or "N/A"
+    story.append(Paragraph(f"<b>Date:</b> {date_val}", sub_style))
+
+    desc = item.get("description") or ""
+    story.append(Paragraph(f"<b>Description:</b> {desc}", sub_style))
+
+    tags = item.get("tags") or []
+    if tags:
+        story.append(Paragraph(f"<b>Tags:</b> {', '.join(tags)}", sub_style))
+
+    transcription = item.get("transcription")
+    if transcription:
+        story.append(Spacer(1, 0.15 * inch))
+        story.append(Paragraph("<b>Transcription / Content:</b>", sub_style))
+        # Split on newlines to preserve formatting
+        for para_text in transcription.split("\n"):
+            para_text = para_text.strip()
+            if para_text:
+                story.append(Paragraph(para_text, body_style))
+                story.append(Spacer(1, 0.05 * inch))
+
+    return story
+
+
 def build_exhibit_pages(lettered: List[Tuple[str, dict]]) -> bytes:
     """Build a PDF containing a cover page and one page per exhibit.
 
@@ -80,21 +132,7 @@ def build_exhibit_pages(lettered: List[Tuple[str, dict]]) -> bytes:
         bottomMargin=inch,
     )
 
-    styles = getSampleStyleSheet()
-    heading_style = ParagraphStyle(
-        "ExhibitHeading",
-        parent=styles["Heading1"],
-        fontSize=16,
-        spaceAfter=12,
-        alignment=1,  # center
-    )
-    sub_style = ParagraphStyle(
-        "ExhibitSub",
-        parent=styles["Normal"],
-        fontSize=11,
-        spaceAfter=6,
-    )
-    body_style = styles["Normal"]
+    styles, heading_style, sub_style = _exhibit_styles()
 
     story = []
 
@@ -127,29 +165,7 @@ def build_exhibit_pages(lettered: List[Tuple[str, dict]]) -> bytes:
 
     # --- One page per exhibit ---
     for letter_str, item in lettered:
-        story.append(Paragraph(f"EXHIBIT {letter_str}", heading_style))
-
-        date_val = item.get("source_date") or "N/A"
-        story.append(Paragraph(f"<b>Date:</b> {date_val}", sub_style))
-
-        desc = item.get("description") or ""
-        story.append(Paragraph(f"<b>Description:</b> {desc}", sub_style))
-
-        tags = item.get("tags") or []
-        if tags:
-            story.append(Paragraph(f"<b>Tags:</b> {', '.join(tags)}", sub_style))
-
-        transcription = item.get("transcription")
-        if transcription:
-            story.append(Spacer(1, 0.15 * inch))
-            story.append(Paragraph("<b>Transcription / Content:</b>", sub_style))
-            # Split on newlines to preserve formatting
-            for para_text in transcription.split("\n"):
-                para_text = para_text.strip()
-                if para_text:
-                    story.append(Paragraph(para_text, body_style))
-                    story.append(Spacer(1, 0.05 * inch))
-
+        story.extend(_exhibit_story(letter_str, item))
         story.append(PageBreak())
 
     doc.build(story)

@@ -5,18 +5,9 @@ import { motionAPI, intakeAPI, profileAPI } from '../../services/api';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
 import { FORM_METADATA, FormType, FORM_TYPES } from '../../types/forms';
 import { addCourtDays, formatCourtDeadline } from '../../utils/courtDays';
-
-interface Question {
-  id: string;
-  type: string;
-  label: string;
-  required: boolean;
-  options?: string[];
-  placeholder?: string;
-  help_text?: string;
-  condition?: string;
-  validation?: any;
-}
+import { QuestionField, Question } from './QuestionField';
+import { ServedMotionUpload } from './ServedMotionUpload';
+import { ServedMotionExtracted } from '../../services/servedMotionApi';
 
 interface IntakeStep {
   step_number: number;
@@ -35,6 +26,17 @@ const PROFILE_FIELD_MAP: Record<string, string> = {
   children_info: 'children_info',
 };
 
+// Wizard fields the served-motion upload may pre-fill. date_served is
+// deliberately absent — it's when the user was served, not in the document,
+// and the response deadline depends on the user entering it themselves.
+const SERVED_MOTION_FIELDS = [
+  'case_number',
+  'petitioner_name',
+  'hearing_date',
+  'hearing_time',
+  'other_party_requests',
+] as const;
+
 interface GuidedIntakeProps {
   onComplete?: (motionId: string) => void;
 }
@@ -47,6 +49,11 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
 
   const currentFormType = formType || motionType;
 
+  const isResponseForm =
+    currentFormType === FORM_TYPES.FL_320 ||
+    currentFormType === 'FL-320' ||
+    currentFormType === 'Response';
+
   const [currentStep, setCurrentStep] = useState(1);
   const [totalSteps, setTotalSteps] = useState(6);
   const [stepData, setStepData] = useState<IntakeStep | null>(null);
@@ -58,6 +65,11 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const [profile, setProfile] = useState<any>(null);
   const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
   const [responseDeadline, setResponseDeadline] = useState<string | null>(null);
+  // FL-320: skippable "upload the motion you were served" gate before step 1
+  const [showUploadGate, setShowUploadGate] = useState(isResponseForm);
+  const [uploadPrefill, setUploadPrefill] = useState<ServedMotionExtracted | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [uploadPrefilledFields, setUploadPrefilledFields] = useState<Set<string>>(new Set());
   // Track last visible question IDs to avoid infinite update loops from evaluateConditionalQuestions
   const visibleQuestionIdsRef = useRef<string>('');
 
@@ -96,12 +108,15 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
     }
   }, [profile, stepData]);
 
+  // Apply served-motion prefill whenever a step loads (upload wins over profile)
+  useEffect(() => {
+    if (uploadPrefill && stepData) {
+      applyUploadPrefill();
+    }
+  }, [uploadPrefill, stepData]);
+
   // FL-320: compute response deadline whenever date_served changes
   useEffect(() => {
-    const isResponseForm =
-      currentFormType === FORM_TYPES.FL_320 ||
-      currentFormType === 'FL-320' ||
-      currentFormType === 'Response';
     if (!isResponseForm) return;
 
     const dateServed: string = watchedValues.date_served;
@@ -131,6 +146,8 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
     const newPrefilled = new Set<string>();
 
     stepData.questions.forEach((question) => {
+      // Upload prefill owns these fields — the served motion is the better source
+      if (uploadPrefill && question.id in uploadPrefill) return;
       const profileKey = PROFILE_FIELD_MAP[question.id];
       if (!profileKey) return;
       const profileValue = profile[profileKey];
@@ -147,6 +164,40 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
     if (newPrefilled.size > 0) {
       setPrefilledFields(newPrefilled);
     }
+  };
+
+  const applyUploadPrefill = () => {
+    if (!uploadPrefill || !stepData) return;
+    const newPrefilled = new Set(uploadPrefilledFields);
+
+    stepData.questions.forEach((question) => {
+      const value = uploadPrefill[question.id as keyof ServedMotionExtracted];
+      if (typeof value !== 'string' || !value) return;
+      if (!getValues(question.id)) {
+        setValue(question.id, value, { shouldValidate: false });
+        newPrefilled.add(question.id);
+      }
+    });
+
+    if (newPrefilled.size !== uploadPrefilledFields.size) {
+      setUploadPrefilledFields(newPrefilled);
+    }
+  };
+
+  const handleUploadExtracted = (
+    extracted: ServedMotionExtracted,
+    notice: string | null
+  ) => {
+    const allowed: ServedMotionExtracted = {};
+    SERVED_MOTION_FIELDS.forEach((key) => {
+      const value = extracted[key];
+      if (typeof value === 'string' && value) {
+        allowed[key] = value;
+      }
+    });
+    setUploadPrefill(Object.keys(allowed).length > 0 ? allowed : null);
+    setUploadNotice(notice);
+    setShowUploadGate(false);
   };
 
   const initializeMotion = async () => {
@@ -276,116 +327,15 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
     }
   };
 
-  const renderQuestion = (question: Question) => {
-    switch (question.type) {
-      case 'text':
-        return (
-          <input
-            {...register(question.id, { required: question.required })}
-            id={question.id}
-            type="text"
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder={question.placeholder}
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            {...register(question.id, { required: question.required })}
-            id={question.id}
-            rows={4}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder={question.placeholder}
-          />
-        );
-
-      case 'select':
-        return (
-          <select
-            {...register(question.id, { required: question.required })}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-          >
-            <option value="">Choose...</option>
-            {question.options?.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-
-      case 'radio':
-        return (
-          <div className="mt-2 space-y-2">
-            {question.options?.map(option => (
-              <label key={option} className="inline-flex items-center mr-4">
-                <input
-                  {...register(question.id, { required: question.required })}
-                  type="radio"
-                  value={option}
-                  className="form-radio h-4 w-4 text-indigo-600"
-                />
-                <span className="ml-2">{option}</span>
-              </label>
-            ))}
-          </div>
-        );
-
-      case 'checkbox':
-        return (
-          <div className="mt-2 space-y-2">
-            {question.options?.map(option => (
-              <label key={option} className="flex items-center">
-                <input
-                  {...register(`${question.id}.${option}`)}
-                  type="checkbox"
-                  className="form-checkbox h-4 w-4 text-indigo-600"
-                />
-                <span className="ml-2">{option}</span>
-              </label>
-            ))}
-          </div>
-        );
-
-      case 'date':
-        return (
-          <input
-            {...register(question.id, { required: question.required })}
-            id={question.id}
-            type="date"
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          />
-        );
-
-      case 'time':
-        return (
-          <input
-            {...register(question.id, { required: question.required })}
-            id={question.id}
-            type="time"
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          />
-        );
-
-      case 'currency':
-        return (
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">$</span>
-            </div>
-            <input
-              {...register(question.id, { required: question.required })}
-              type="number"
-              step="0.01"
-              className="pl-7 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="0.00"
-            />
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  // FL-320 gate: offer the served-motion upload before anything else renders
+  if (showUploadGate) {
+    return (
+      <ServedMotionUpload
+        onExtracted={handleUploadExtracted}
+        onSkip={() => setShowUploadGate(false)}
+      />
+    );
+  }
 
   // Show LLM processing screen — never a blank screen during this phase
   if (processingLLM) {
@@ -439,6 +389,13 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
               </h3>
               <p className="text-gray-600 mb-6">{stepData.description}</p>
 
+              {uploadNotice && currentStep === 1 && (
+                <div className="mb-6 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
+                  <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" aria-hidden="true" />
+                  <p className="text-sm text-amber-800">{uploadNotice}</p>
+                </div>
+              )}
+
               {responseDeadline && (
                 <div className="mb-6 flex items-start gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
                   <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" aria-hidden="true" />
@@ -461,12 +418,16 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
                       {question.label}
                       {question.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
-                    {renderQuestion(question)}
-                    {prefilledFields.has(question.id) && (
+                    <QuestionField question={question} register={register} />
+                    {uploadPrefilledFields.has(question.id) ? (
+                      <p className="mt-1 text-xs text-indigo-600">
+                        Filled from your uploaded motion — please verify
+                      </p>
+                    ) : prefilledFields.has(question.id) ? (
                       <p className="mt-1 text-xs text-indigo-600">
                         Filled from your profile
                       </p>
-                    )}
+                    ) : null}
                     {question.help_text && (
                       <p className="mt-1 text-sm text-gray-500">{question.help_text}</p>
                     )}

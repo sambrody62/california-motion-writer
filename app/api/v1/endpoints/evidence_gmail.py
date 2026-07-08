@@ -7,7 +7,7 @@ they are never written to any database column.
 """
 import os
 import logging
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,11 +17,11 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.evidence import Evidence
-from app.models.motion import Motion
+from app.models.motion import Motion, MotionDraft
 from app.models.user import User
 from app.api.v1.endpoints.auth import get_current_user
-from app.api.v1.endpoints.evidence import EvidenceResponse
-from app.services import gmail_evidence_service
+from app.api.v1.endpoints.evidence import EvidenceResponse, VALID_TAGS
+from app.services import evidence_ranking_service, gmail_evidence_service
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,29 @@ def _require_flag() -> None:
     """Raise 404 when the Gmail feature flag is off."""
     if os.getenv("GMAIL_EVIDENCE_ENABLED", "false") != "true":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+
+async def _load_claims_narrative(motion: Motion, db: AsyncSession) -> str:
+    """The user's intake claims, for relevance ranking."""
+    drafts_result = await db.execute(
+        select(MotionDraft.question_data)
+        .where(MotionDraft.motion_id == motion.id)
+        .order_by(MotionDraft.step_number)
+    )
+    drafts = [row[0] or {} for row in drafts_result.all()]
+    return evidence_ranking_service.build_claims_narrative(
+        getattr(motion, "intake_data", None) or {}, drafts
+    )
+
+
+def _validate_tags_by_message(tags_by_message: Optional[Dict[str, List[str]]]) -> None:
+    for message_id, tags in (tags_by_message or {}).items():
+        invalid = [t for t in tags if t not in VALID_TAGS]
+        if invalid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid tags {invalid}. Valid tags: {sorted(VALID_TAGS)}",
+            )
 
 
 async def _get_owned_motion(motion_id: str, user: User, db: AsyncSession) -> Motion:
@@ -61,6 +84,8 @@ class ScanRequest(BaseModel):
 class ImportRequest(BaseModel):
     access_token: str
     message_ids: List[str]
+    # Optional per-message tags (seeded from ranking suggestions, user-editable)
+    tags_by_message: Optional[Dict[str, List[str]]] = None
 
 
 class AuthUrlResponse(BaseModel):
@@ -147,8 +172,8 @@ async def scan_gmail(
     logger.info(
         "Gmail scan returned %d candidates for motion_id=%s", len(candidates), motion_id
     )
-    # Return dicts directly — no full bodies in the response
-    return [
+    # Metadata only — no full bodies in the response or the ranking prompt
+    slim = [
         {
             "message_id": c["message_id"],
             "from": c.get("from", ""),
@@ -158,6 +183,12 @@ async def scan_gmail(
         }
         for c in candidates
     ]
+
+    claims = await _load_claims_narrative(motion, db)
+    ranked, ranking_notice = await evidence_ranking_service.rank_candidates(
+        slim, claims, user_id=str(current_user.id)
+    )
+    return {"emails": ranked, "ranking_notice": ranking_notice}
 
 
 @router.post(
@@ -182,8 +213,10 @@ async def import_gmail_evidence(
     _require_flag()
     await _get_owned_motion(motion_id, current_user, db)
 
+    _validate_tags_by_message(payload.tags_by_message)
     bodies = gmail_evidence_service.fetch_bodies(payload.access_token, payload.message_ids)
 
+    tags_by_message = payload.tags_by_message or {}
     created = []
     for msg_id, body in bodies.items():
         parsed_date: Optional[date] = None
@@ -197,7 +230,7 @@ async def import_gmail_evidence(
             motion_id=motion_id,
             user_id=str(current_user.id),
             evidence_type="email",
-            tags=[],
+            tags=tags_by_message.get(msg_id, []),
             source_date=parsed_date,
             description=body.get("subject", ""),
             transcription=body.get("body_text", ""),

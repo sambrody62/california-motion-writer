@@ -17,6 +17,7 @@ import ChatInterface from './components/chat/ChatInterface';
 import { EmergencyHelp } from './components/emergency/EmergencyHelp';
 import { ViolationIntake } from './components/violation/ViolationIntake';
 import { EvidenceManager } from './components/evidence/EvidenceManager';
+import { BulkTextImport } from './components/evidence/BulkTextImport';
 import { GmailCallback } from './components/evidence/GmailCallback';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { Terms } from './components/legal/Terms';
@@ -150,6 +151,14 @@ function App() {
             element={
               <PrivateRoute>
                 <EvidenceManager />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/motion/:motionId/evidence/bulk-import"
+            element={
+              <PrivateRoute>
+                <BulkTextImport />
               </PrivateRoute>
             }
           />

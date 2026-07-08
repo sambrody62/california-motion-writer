@@ -15,8 +15,11 @@ api_router.include_router(motions.router, prefix="/motions", tags=["Motions"])
 api_router.include_router(intake.router, prefix="/intake", tags=["Intake"])
 api_router.include_router(llm.router, prefix="/llm", tags=["LLM"])
 api_router.include_router(documents.router, prefix="/documents", tags=["Documents"])
-api_router.include_router(violations.router, prefix="/violations", tags=["Violations"])
+# violations and chat_pdf carry their own path prefixes; evidence and evidence_gmail
+# declare frontend-facing paths (/motions/..., /evidence/..., /gmail/...) directly.
+# Adding prefixes here doubled every path and broke the frontend contract.
+api_router.include_router(violations.router, tags=["Violations"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
-api_router.include_router(chat_pdf.router, prefix="/chat-pdf", tags=["Chat-to-PDF"])
-api_router.include_router(evidence.router, prefix="/evidence", tags=["Evidence"])
-api_router.include_router(evidence_gmail.router, prefix="/gmail", tags=["Evidence-Gmail"])
+api_router.include_router(chat_pdf.router, tags=["Chat-to-PDF"])
+api_router.include_router(evidence.router, tags=["Evidence"])
+api_router.include_router(evidence_gmail.router, tags=["Evidence-Gmail"])

@@ -38,14 +38,14 @@ async def _create_motion(client: AsyncClient, headers: dict) -> str:
 async def test_auth_url_returns_404_when_flag_off(client: AsyncClient, auth_headers: dict):
     """With GMAIL_EVIDENCE_ENABLED unset/false all endpoints must return 404."""
     assert os.getenv("GMAIL_EVIDENCE_ENABLED", "false") != "true"
-    resp = await client.get("/api/v1/gmail/evidence/gmail/auth-url", headers=auth_headers)
+    resp = await client.get("/api/v1/gmail/auth-url", headers=auth_headers)
     assert resp.status_code == 404
 
 
 async def test_exchange_returns_404_when_flag_off(client: AsyncClient, auth_headers: dict):
     assert os.getenv("GMAIL_EVIDENCE_ENABLED", "false") != "true"
     resp = await client.post(
-        "/api/v1/gmail/evidence/gmail/exchange",
+        "/api/v1/gmail/exchange-code",
         json={"code": "dummy-code"},
         headers=auth_headers,
     )
@@ -55,7 +55,7 @@ async def test_exchange_returns_404_when_flag_off(client: AsyncClient, auth_head
 async def test_scan_returns_404_when_flag_off(client: AsyncClient, auth_headers: dict):
     assert os.getenv("GMAIL_EVIDENCE_ENABLED", "false") != "true"
     resp = await client.post(
-        "/api/v1/gmail/motions/some-id/evidence/gmail/scan",
+        "/api/v1/motions/some-id/gmail/scan",
         json={"access_token": "tok"},
         headers=auth_headers,
     )
@@ -65,7 +65,7 @@ async def test_scan_returns_404_when_flag_off(client: AsyncClient, auth_headers:
 async def test_import_returns_404_when_flag_off(client: AsyncClient, auth_headers: dict):
     assert os.getenv("GMAIL_EVIDENCE_ENABLED", "false") != "true"
     resp = await client.post(
-        "/api/v1/gmail/motions/some-id/evidence/gmail/import",
+        "/api/v1/motions/some-id/gmail/import",
         json={"access_token": "tok", "message_ids": ["id1"]},
         headers=auth_headers,
     )
@@ -111,7 +111,7 @@ async def test_auth_url_returns_url(client: AsyncClient, auth_headers: dict, gma
         "app.services.gmail_evidence_service.get_auth_url",
         return_value="https://accounts.google.com/o/oauth2/auth?test=1",
     ):
-        resp = await client.get("/api/v1/gmail/evidence/gmail/auth-url", headers=auth_headers)
+        resp = await client.get("/api/v1/gmail/auth-url", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "auth_url" in data
@@ -125,7 +125,7 @@ async def test_exchange_returns_access_token(client: AsyncClient, auth_headers: 
         return_value="ya29.short-lived-token",
     ):
         resp = await client.post(
-            "/api/v1/gmail/evidence/gmail/exchange",
+            "/api/v1/gmail/exchange-code",
             json={"code": "4/authcode"},
             headers=auth_headers,
         )
@@ -144,7 +144,7 @@ async def test_scan_returns_candidates(client: AsyncClient, auth_headers: dict, 
         return_value=MOCK_CANDIDATES,
     ):
         resp = await client.post(
-            f"/api/v1/gmail/motions/{motion_id}/evidence/gmail/scan",
+            f"/api/v1/motions/{motion_id}/gmail/scan",
             json={"access_token": "ya29.tok"},
             headers=auth_headers,
         )
@@ -181,7 +181,7 @@ async def test_scan_enforces_ownership(client: AsyncClient, auth_headers: dict, 
     other_headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
 
     resp = await client.post(
-        f"/api/v1/gmail/motions/{motion_id}/evidence/gmail/scan",
+        f"/api/v1/motions/{motion_id}/gmail/scan",
         json={"access_token": "ya29.tok"},
         headers=other_headers,
     )
@@ -197,7 +197,7 @@ async def test_import_creates_unconfirmed_evidence(client: AsyncClient, auth_hea
         return_value=MOCK_BODIES,
     ):
         resp = await client.post(
-            f"/api/v1/gmail/motions/{motion_id}/evidence/gmail/import",
+            f"/api/v1/motions/{motion_id}/gmail/import",
             json={"access_token": "ya29.tok", "message_ids": ["abc123"]},
             headers=auth_headers,
         )
@@ -238,7 +238,7 @@ async def test_import_enforces_ownership(client: AsyncClient, auth_headers: dict
     other_headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
 
     resp = await client.post(
-        f"/api/v1/gmail/motions/{motion_id}/evidence/gmail/import",
+        f"/api/v1/motions/{motion_id}/gmail/import",
         json={"access_token": "ya29.tok", "message_ids": ["abc123"]},
         headers=other_headers,
     )
@@ -254,7 +254,7 @@ async def test_no_token_stored_in_evidence_row(client: AsyncClient, auth_headers
         return_value=MOCK_BODIES,
     ):
         resp = await client.post(
-            f"/api/v1/gmail/motions/{motion_id}/evidence/gmail/import",
+            f"/api/v1/motions/{motion_id}/gmail/import",
             json={"access_token": "ya29.supersecret", "message_ids": ["abc123"]},
             headers=auth_headers,
         )
@@ -269,7 +269,7 @@ async def test_no_token_stored_in_evidence_row(client: AsyncClient, auth_headers
 async def test_unauthenticated_scan_returns_401(client: AsyncClient, gmail_env):
     """Unauthenticated access to scan should return 401, not 404."""
     resp = await client.post(
-        "/api/v1/gmail/motions/any-id/evidence/gmail/scan",
+        "/api/v1/motions/any-id/gmail/scan",
         json={"access_token": "tok"},
     )
     assert resp.status_code == 401

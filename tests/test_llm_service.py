@@ -37,8 +37,8 @@ class TestLLMServiceRewriteRfoSection:
         assert isinstance(result["tokens_used"], int)
 
     @pytest.mark.asyncio
-    async def test_mock_output_contains_section_name(self, llm_service):
-        """Mock mode includes section name in output."""
+    async def test_mock_output_contains_user_words(self, llm_service):
+        """Mock mode passes the user's own words through — no placeholder copy."""
         result = await llm_service.rewrite_rfo_section(
             section_name="custody_facts",
             user_answers={"facts": "I have been the primary caregiver"},
@@ -46,7 +46,8 @@ class TestLLMServiceRewriteRfoSection:
         )
 
         assert result["success"] is True
-        assert "custody_facts" in result["rewritten_text"]
+        assert "primary caregiver" in result["rewritten_text"]
+        assert "MOCK" not in result["rewritten_text"]
 
     @pytest.mark.asyncio
     async def test_with_user_id(self, llm_service):

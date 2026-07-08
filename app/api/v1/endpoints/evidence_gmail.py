@@ -96,7 +96,7 @@ class CandidateResponse(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/evidence/gmail/auth-url", response_model=AuthUrlResponse)
+@router.get("/gmail/auth-url", response_model=AuthUrlResponse)
 async def get_auth_url(current_user: User = Depends(get_current_user)):
     """Return the Google OAuth consent URL for gmail.readonly."""
     _require_flag()
@@ -104,7 +104,7 @@ async def get_auth_url(current_user: User = Depends(get_current_user)):
     return AuthUrlResponse(auth_url=url)
 
 
-@router.post("/evidence/gmail/exchange", response_model=ExchangeResponse)
+@router.post("/gmail/exchange-code", response_model=ExchangeResponse)
 async def exchange_code(
     payload: ExchangeRequest,
     current_user: User = Depends(get_current_user),
@@ -118,7 +118,7 @@ async def exchange_code(
     return ExchangeResponse(access_token=token)
 
 
-@router.post("/motions/{motion_id}/evidence/gmail/scan")
+@router.post("/motions/{motion_id}/gmail/scan")
 async def scan_gmail(
     motion_id: str,
     payload: ScanRequest,
@@ -161,7 +161,7 @@ async def scan_gmail(
 
 
 @router.post(
-    "/motions/{motion_id}/evidence/gmail/import",
+    "/motions/{motion_id}/gmail/import",
     response_model=List[EvidenceResponse],
     status_code=201,
 )

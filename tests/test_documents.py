@@ -242,9 +242,9 @@ class TestDocumentDownload:
         )
         assert draft_resp.status_code in (200, 201), draft_resp.text
 
-        # Generate document record via sync endpoint (PDF service mocked)
+        # Generate document record via sync endpoint (packet generator mocked)
         with patch(
-            "app.api.v1.endpoints.documents.pdf_service.generate_motion_pdf",
+            "app.api.v1.endpoints.documents.generate_packet",
             new=AsyncMock(return_value=fake_pdf)
         ):
             sync_resp = await client.post(
@@ -264,9 +264,9 @@ class TestDocumentDownload:
         assert len(docs) > 0
         document_id = docs[0]["id"]
 
-        # Test the download endpoint
+        # Test the download endpoint — must use the same packet generator as sync
         with patch(
-            "app.api.v1.endpoints.documents.pdf_service.generate_motion_pdf",
+            "app.api.v1.endpoints.documents.generate_packet",
             new=AsyncMock(return_value=fake_pdf)
         ):
             dl_resp = await client.get(

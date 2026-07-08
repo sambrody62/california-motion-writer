@@ -20,6 +20,11 @@ if USE_GCP and not USE_MOCK_LLM and not USE_CLAUDE:
     except ImportError:
         USE_MOCK_LLM = True
         print("Warning: Vertex AI not available, using mock LLM for local development")
+elif not USE_MOCK_LLM and not USE_CLAUDE:
+    # USE_GCP=false with no other backend selected — mock is the only option left.
+    # Without this, __init__ would call vertexai.init() with vertexai never imported.
+    USE_MOCK_LLM = True
+    print("Warning: no LLM backend configured (USE_GCP=false), using mock LLM")
 
 from app.core.config import settings
 from app.middleware.rate_limiter import get_token_limit
@@ -313,15 +318,9 @@ Format each factor as separate paragraph with supporting facts."""
             token_limit = get_token_limit("section_rewrite")
 
             if USE_MOCK_LLM:
-                # Mock response for local development
-                rewritten_text = f"""MOCK LLM RESPONSE for {section_name}:
-
-Based on the provided information:
-{user_input[:500]}...
-
-This is a mock response for local development. In production, this would be a professionally rewritten section appropriate for California family court.
-
-[Mock generated content for {section_name}]"""
+                # Mock mode passes the user's own words through unchanged — this text
+                # lands in filing-ready PDFs, so it must never contain placeholder copy.
+                rewritten_text = user_input
                 tokens_used = len(prompt.split()) + len(rewritten_text.split())
                 model_name = "mock-llm"
             else:
@@ -387,17 +386,16 @@ This is a mock response for local development. In production, this would be a pr
                 }
 
             if USE_MOCK_LLM:
-                rewritten_text = f"""MOCK DECLARATION:
+                # Mock mode wraps the user's narrative in the standard declaration
+                # skeleton — no placeholder copy, since this can land in a filed PDF.
+                rewritten_text = f"""I, {declarant_name}, declare as follows:
 
-I, {declarant_name}, declare as follows:
+{narrative}
 
-1. This is a mock declaration for local development.
-2. The narrative provided was: {narrative[:200]}...
-3. In production, this would be a properly formatted legal declaration.
+I declare under penalty of perjury under the laws of the State of California that the foregoing is true and correct.
 
-I declare under penalty of perjury under the laws of the State of California that the foregoing is true and correct. Executed on [date] at [city], California.
 
-[Mock Signature]
+_____________________________
 {declarant_name}"""
                 tokens_used = len(prompt.split()) + len(rewritten_text.split())
                 model_name = "mock-llm"
@@ -438,26 +436,13 @@ I declare under penalty of perjury under the laws of the State of California tha
             prompt = self._build_best_interests_prompt(custody_request, children_info)
 
             if USE_MOCK_LLM:
-                enhanced_text = f"""MOCK ENHANCED CUSTODY REQUEST:
+                enhanced_text = f"""{custody_request}
 
-Original request: {custody_request[:200]}...
+The following California best interests factors support this request:
 
-Best Interests Factors (Mock):
-
-1. Health, Safety, and Welfare of Children
-   - Children's information: {json.dumps(children_info[:2]) if children_info else 'No children info'}...
-   - This is a mock enhancement for local development.
-
-2. Stability and Continuity
-   - In production, this would include detailed analysis.
-
-3. Child's Preference
-   - Mock consideration of child preferences.
-
-4. Parental Fitness
-   - Mock assessment of parental capabilities.
-
-[In production, this would be a comprehensive enhancement based on California best interests standards]"""
+1. Health, safety, and welfare of the children.
+2. Stability and continuity in the children's daily routine.
+3. Each parent's ability to provide appropriate care."""
                 tokens_used = len(prompt.split()) + len(enhanced_text.split())
                 model_name = "mock-llm"
             else:

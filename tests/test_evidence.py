@@ -42,7 +42,7 @@ async def _create_evidence(client: AsyncClient, headers: dict, motion_id: str, *
         **overrides,
     }
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         json=payload,
         headers=headers,
     )
@@ -78,7 +78,7 @@ async def test_list_evidence(client: AsyncClient, auth_headers: dict):
     await _create_evidence(client, auth_headers, motion_id, tags=["non_payment"])
 
     resp = await client.get(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         headers=auth_headers,
     )
     assert resp.status_code == 200
@@ -92,7 +92,7 @@ async def test_update_evidence(client: AsyncClient, auth_headers: dict):
     evidence_id = create_resp.json()["id"]
 
     resp = await client.put(
-        f"/api/v1/evidence/evidence/{evidence_id}",
+        f"/api/v1/evidence/{evidence_id}",
         json={"tags": ["false_claim"], "user_confirmed": True},
         headers=auth_headers,
     )
@@ -108,13 +108,13 @@ async def test_delete_evidence(client: AsyncClient, auth_headers: dict):
     evidence_id = create_resp.json()["id"]
 
     del_resp = await client.delete(
-        f"/api/v1/evidence/evidence/{evidence_id}",
+        f"/api/v1/evidence/{evidence_id}",
         headers=auth_headers,
     )
     assert del_resp.status_code == 204
 
     list_resp = await client.get(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         headers=auth_headers,
     )
     assert list_resp.json() == []
@@ -147,7 +147,7 @@ async def test_other_user_cannot_list_evidence(client: AsyncClient, auth_headers
     other_headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
 
     resp = await client.get(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         headers=other_headers,
     )
     assert resp.status_code == 404
@@ -175,7 +175,7 @@ async def test_other_user_cannot_delete_evidence(client: AsyncClient, auth_heade
     other_headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
 
     resp = await client.delete(
-        f"/api/v1/evidence/evidence/{evidence_id}",
+        f"/api/v1/evidence/{evidence_id}",
         headers=other_headers,
     )
     assert resp.status_code == 404
@@ -203,7 +203,7 @@ async def test_update_with_invalid_tag_returns_400(client: AsyncClient, auth_hea
     evidence_id = create_resp.json()["id"]
 
     resp = await client.put(
-        f"/api/v1/evidence/evidence/{evidence_id}",
+        f"/api/v1/evidence/{evidence_id}",
         json={"tags": ["bogus"]},
         headers=auth_headers,
     )
@@ -218,7 +218,7 @@ async def test_upload_text_file(client: AsyncClient, auth_headers: dict):
     motion_id = await _create_motion(client, auth_headers)
     file_content = b"This is a text evidence file."
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("evidence.txt", io.BytesIO(file_content), "text/plain")},
         data={"evidence_type": "document", "tags": '["other"]', "description": "A text file"},
         headers=auth_headers,
@@ -238,7 +238,7 @@ async def test_upload_image_file(client: AsyncClient, auth_headers: dict):
         b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
     )
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("screenshot.png", io.BytesIO(png_bytes), "image/png")},
         data={"evidence_type": "photo", "tags": '["threat"]', "description": "Screenshot"},
         headers=auth_headers,
@@ -249,7 +249,7 @@ async def test_upload_image_file(client: AsyncClient, auth_headers: dict):
 async def test_upload_disallowed_file_type_returns_400(client: AsyncClient, auth_headers: dict):
     motion_id = await _create_motion(client, auth_headers)
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("malware.exe", io.BytesIO(b"MZ\x90"), "application/octet-stream")},
         data={"evidence_type": "document", "tags": '["other"]', "description": "Bad file"},
         headers=auth_headers,
@@ -262,7 +262,7 @@ async def test_upload_file_too_large_returns_413(client: AsyncClient, auth_heade
     # 11 MB — exceeds 10 MB limit
     big_content = b"x" * (11 * 1024 * 1024)
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("big.pdf", io.BytesIO(big_content), "application/pdf")},
         data={"evidence_type": "document", "tags": '["other"]', "description": "Too big"},
         headers=auth_headers,
@@ -277,7 +277,7 @@ async def test_upload_file_too_large_returns_413(client: AsyncClient, auth_heade
 async def test_filename_sanitized(client: AsyncClient, auth_headers: dict):
     motion_id = await _create_motion(client, auth_headers)
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("../../etc/passwd.txt", io.BytesIO(b"root:x:0:0"), "text/plain")},
         data={"evidence_type": "document", "tags": '["other"]', "description": "Path traversal attempt"},
         headers=auth_headers,
@@ -292,7 +292,7 @@ async def test_filename_sanitized(client: AsyncClient, auth_headers: dict):
 async def test_empty_filename_rejected(client: AsyncClient, auth_headers: dict):
     motion_id = await _create_motion(client, auth_headers)
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("", io.BytesIO(b"data"), "text/plain")},
         data={"evidence_type": "document", "tags": '["other"]', "description": "No filename"},
         headers=auth_headers,
@@ -306,7 +306,7 @@ async def test_empty_filename_rejected(client: AsyncClient, auth_headers: dict):
 # ---------------------------------------------------------------------------
 
 async def test_unauthenticated_returns_401(client: AsyncClient):
-    resp = await client.get("/api/v1/evidence/motions/nonexistent/evidence")
+    resp = await client.get("/api/v1/motions/nonexistent/evidence")
     assert resp.status_code == 401
 
 
@@ -339,7 +339,7 @@ async def test_ocr_suggestion_included_in_upload_response_when_flag_on(
     with patch.object(ocr_service, "_VISION_AVAILABLE", True):
         with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
             resp = await client.post(
-                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                f"/api/v1/motions/{motion_id}/evidence/upload",
                 files={"file": ("screenshot.png", io.BytesIO(PNG_BYTES), "image/png")},
                 data={"evidence_type": "photo", "tags": '["threat"]', "description": "Screenshot"},
                 headers=auth_headers,
@@ -371,7 +371,7 @@ async def test_ocr_stored_transcription_not_set_user_confirmed_false(
     with patch.object(ocr_service, "_VISION_AVAILABLE", True):
         with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
             resp = await client.post(
-                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                f"/api/v1/motions/{motion_id}/evidence/upload",
                 files={"file": ("photo.jpg", io.BytesIO(PNG_BYTES), "image/jpeg")},
                 data={"evidence_type": "photo", "tags": '["other"]', "description": "Photo"},
                 headers=auth_headers,
@@ -391,7 +391,7 @@ async def test_no_ocr_suggestion_when_flag_off(
 
     motion_id = await _create_motion(client, auth_headers)
     resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+        f"/api/v1/motions/{motion_id}/evidence/upload",
         files={"file": ("screenshot.png", io.BytesIO(PNG_BYTES), "image/png")},
         data={"evidence_type": "photo", "tags": '["threat"]', "description": "Screenshot"},
         headers=auth_headers,
@@ -418,7 +418,7 @@ async def test_no_ocr_suggestion_for_non_image_file(
     with patch.object(ocr_service, "_VISION_AVAILABLE", True):
         with patch.object(ocr_service, "_build_vision_client", return_value=mock_client):
             resp = await client.post(
-                f"/api/v1/evidence/motions/{motion_id}/evidence/upload",
+                f"/api/v1/motions/{motion_id}/evidence/upload",
                 files={"file": ("document.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")},
                 data={"evidence_type": "document", "tags": '["other"]', "description": "PDF"},
                 headers=auth_headers,

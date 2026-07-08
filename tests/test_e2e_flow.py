@@ -286,7 +286,7 @@ async def test_full_rfo_journey_with_evidence(client: AsyncClient):
     # 6. Create 2 confirmed tagged evidence items
     # ------------------------------------------------------------------
     ev1_resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         json={
             "evidence_type": "text",
             "tags": ["custody_violation"],
@@ -300,7 +300,7 @@ async def test_full_rfo_journey_with_evidence(client: AsyncClient):
     ev1_id = ev1_resp.json()["id"]
 
     ev2_resp = await client.post(
-        f"/api/v1/evidence/motions/{motion_id}/evidence",
+        f"/api/v1/motions/{motion_id}/evidence",
         json={
             "evidence_type": "text",
             "tags": ["threat"],
@@ -316,7 +316,7 @@ async def test_full_rfo_journey_with_evidence(client: AsyncClient):
     # Confirm both evidence items
     for ev_id in (ev1_id, ev2_id):
         confirm_resp = await client.put(
-            f"/api/v1/evidence/evidence/{ev_id}",
+            f"/api/v1/evidence/{ev_id}",
             json={"user_confirmed": True},
             headers=headers,
         )

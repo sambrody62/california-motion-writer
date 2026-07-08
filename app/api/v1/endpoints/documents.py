@@ -29,11 +29,88 @@ from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
 from app.core.config import settings
-from app.services.pdf_service import pdf_service
 from app.services.pdf_packet_service import generate_packet
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _motion_type_value(motion_type) -> str:
+    """Enum-or-string motion_type → its string value (never 'MotionType.RFO')."""
+    return motion_type.value if hasattr(motion_type, "value") else str(motion_type)
+
+
+def _primary_form_for(motion) -> str:
+    return (
+        "FL-300"
+        if _motion_type_value(motion.motion_type).lower() in {"rfo", "violation", "fl-300"}
+        else "FL-320"
+    )
+
+
+async def _load_packet_inputs(motion, current_user, db):
+    """Profile, llm_sections, and confirmed evidence for generate_packet.
+
+    Shared by generate-pdf-sync and download so both always render the same packet.
+    """
+    profile_result = await db.execute(
+        select(Profile).where(Profile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User profile not found. Please complete your profile first."
+        )
+
+    drafts_result = await db.execute(
+        select(MotionDraft)
+        .where(MotionDraft.motion_id == motion.id)
+        .order_by(MotionDraft.step_number)
+    )
+    drafts = drafts_result.scalars().all()
+    if not drafts:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No draft sections found for this motion"
+        )
+
+    llm_sections = [
+        {
+            "step_number": draft.step_number,
+            "section": draft.step_name,
+            "original_answers": draft.question_data,
+            "rewritten_text": draft.llm_output or ""
+        }
+        for draft in drafts
+    ]
+
+    # Load confirmed evidence for this motion (late import — Evidence model may not exist yet).
+    evidence_dicts: list = []
+    try:
+        from app.models.evidence import Evidence  # noqa: PLC0415
+        ev_result = await db.execute(
+            select(Evidence)
+            .where(Evidence.motion_id == motion.id)
+            .where(Evidence.user_confirmed.is_(True))
+        )
+        evidence_dicts = [
+            {
+                "id": str(ev.id),
+                "evidence_type": ev.evidence_type,
+                "tags": ev.tags or [],
+                "source_date": str(ev.source_date) if ev.source_date else None,
+                "description": ev.description or "",
+                "transcription": ev.transcription,
+                "filename": ev.filename,
+                "user_confirmed": ev.user_confirmed,
+            }
+            for ev in ev_result.scalars().all()
+        ]
+    except Exception:
+        evidence_dicts = []
+
+    return profile, llm_sections, evidence_dicts
 
 class GeneratePDFRequest(BaseModel):
     motion_id: str
@@ -69,15 +146,20 @@ async def generate_pdf(
             )
         
         # Auto-detect document type if not provided
-        document_type = request.document_type
-        if not document_type:
-            document_type = "FL-300" if motion.motion_type == "RFO" else "FL-320"
-        
+        document_type = request.document_type or _primary_form_for(motion)
+
+        # Case number lives on the profile, not the motion
+        profile_result = await db.execute(
+            select(Profile).where(Profile.user_id == current_user.id)
+        )
+        profile = profile_result.scalar_one_or_none()
+        case_number = (profile.case_number if profile else None) or "DRAFT"
+
         # Create document record
         document = Document(
             motion_id=motion.id,
             document_type=document_type,
-            filename=f"{motion.case_number or 'DRAFT'}_{document_type}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            filename=f"{case_number}_{document_type}_{datetime.now().strftime('%Y%m%d')}.pdf",
             generation_method="automated",
             gcs_url=""  # Will be updated after generation
         )
@@ -166,82 +248,19 @@ async def generate_pdf_sync(
                 detail="Motion not found"
             )
         
-        # Get user profile
-        profile_result = await db.execute(
-            select(Profile)
-            .where(Profile.user_id == current_user.id)
+        profile, llm_sections, evidence_dicts = await _load_packet_inputs(
+            motion, current_user, db
         )
-        profile = profile_result.scalar_one_or_none()
-        
-        if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User profile not found. Please complete your profile first."
-            )
-        
-        # Get motion drafts with LLM output
-        drafts_result = await db.execute(
-            select(MotionDraft)
-            .where(MotionDraft.motion_id == motion.id)
-            .order_by(MotionDraft.step_number)
-        )
-        drafts = drafts_result.scalars().all()
-        
-        if not drafts:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No draft sections found for this motion"
-            )
-        
-        llm_sections = [
-            {
-                "step_number": draft.step_number,
-                "section": draft.step_name,
-                "original_answers": draft.question_data,
-                "rewritten_text": draft.llm_output or ""
-            }
-            for draft in drafts
-        ]
-
-        # Load confirmed evidence for this motion (late import — Evidence model may not exist yet).
-        evidence_dicts: list = []
-        try:
-            from app.models.evidence import Evidence  # noqa: PLC0415
-            ev_result = await db.execute(
-                select(Evidence)
-                .where(Evidence.motion_id == motion.id)
-                .where(Evidence.user_confirmed.is_(True))
-            )
-            ev_rows = ev_result.scalars().all()
-            evidence_dicts = [
-                {
-                    "id": str(ev.id),
-                    "evidence_type": ev.evidence_type,
-                    "tags": ev.tags or [],
-                    "source_date": str(ev.source_date) if ev.source_date else None,
-                    "description": ev.description or "",
-                    "transcription": ev.transcription,
-                    "filename": ev.filename,
-                    "user_confirmed": ev.user_confirmed,
-                }
-                for ev in ev_rows
-            ]
-        except (ImportError, Exception):
-            evidence_dicts = []
 
         # Generate PDF packet (primary form + MC-030 declaration + FL-150 if support issue
         # + exhibit pages if confirmed evidence exists)
         pdf_bytes = await generate_packet(motion, profile, llm_sections, evidence=evidence_dicts)
 
-        # Determine primary document type for record-keeping
-        _mt_raw = motion.motion_type.value if hasattr(motion.motion_type, "value") else str(motion.motion_type)
-        primary_form = "FL-300" if _mt_raw.lower() in {"rfo", "violation", "fl-300"} else "FL-320"
-
         # Create document record
         document = Document(
             motion_id=motion.id,
-            document_type=primary_form,
-            filename=f"{profile.case_number or 'DRAFT'}_{motion.motion_type}_{datetime.now().strftime('%Y%m%d')}.pdf",
+            document_type=_primary_form_for(motion),
+            filename=f"{profile.case_number or 'DRAFT'}_{_motion_type_value(motion.motion_type)}_{datetime.now().strftime('%Y%m%d')}.pdf",
             file_size_bytes=len(pdf_bytes),
             generation_method="automated",
             gcs_url=""  # Would be uploaded to GCS in production
@@ -297,61 +316,13 @@ async def download_document(
         
         document, motion = row
 
-        # Get user profile
-        profile_result = await db.execute(
-            select(Profile).where(Profile.user_id == current_user.id)
+        # Generated PDFs are not persisted (gcs_url is empty locally), so regenerate
+        # through the same packet builder that generate-pdf-sync uses — the download
+        # must always match what was previewed.
+        profile, llm_sections, evidence_dicts = await _load_packet_inputs(
+            motion, current_user, db
         )
-        profile = profile_result.scalar_one_or_none()
-        if not profile:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User profile not found. Please complete your profile first."
-            )
-
-        # Get motion drafts
-        drafts_result = await db.execute(
-            select(MotionDraft)
-            .where(MotionDraft.motion_id == motion.id)
-            .order_by(MotionDraft.step_number)
-        )
-        drafts = drafts_result.scalars().all()
-
-        profile_data = {
-            "is_petitioner": profile.is_petitioner,
-            "county": profile.county,
-            "case_number": profile.case_number,
-            "party_name": profile.party_name,
-            "other_party_name": profile.other_party_name,
-            "party_address": profile.party_address,
-            "party_phone": profile.party_phone,
-            "other_party_attorney": profile.other_party_attorney,
-            "children_info": profile.children_info or []
-        }
-
-        motion_data = {
-            "motion_type": motion.motion_type,
-            "case_caption": motion.case_caption,
-            "filing_date": motion.filing_date,
-            "hearing_date": motion.hearing_date,
-            "hearing_time": motion.hearing_time
-        }
-
-        llm_sections = [
-            {
-                "step_number": draft.step_number,
-                "section": draft.step_name,
-                "original_answers": draft.question_data,
-                "rewritten_text": draft.llm_output or ""
-            }
-            for draft in drafts
-        ]
-
-        pdf_bytes = await pdf_service.generate_motion_pdf(
-            motion_type=motion.motion_type,
-            motion_data=motion_data,
-            profile_data=profile_data,
-            llm_sections=llm_sections
-        )
+        pdf_bytes = await generate_packet(motion, profile, llm_sections, evidence=evidence_dicts)
 
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
@@ -409,7 +380,8 @@ async def list_motion_documents(
                     "filename": doc.filename,
                     "file_size_bytes": doc.file_size_bytes,
                     "generated_at": doc.generated_at,
-                    "available": bool(doc.gcs_url)
+                    # Downloads regenerate from drafts, so every record is available
+                    "available": True
                 }
                 for doc in documents
             ]

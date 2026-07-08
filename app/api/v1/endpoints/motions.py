@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.models.user import User
+from app.models.profile import Profile
 from app.models.motion import Motion, MotionDraft, MotionType
 from app.api.v1.endpoints.auth import get_current_user
 
@@ -41,6 +42,8 @@ class MotionResponse(BaseModel):
     filing_track: Optional[str] = None
     courthouse: Optional[str] = None
     intake_data: Optional[dict] = None
+    # From the user's profile — the frontend shows it on motion cards and PDF filenames
+    case_number: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -51,7 +54,7 @@ class DraftUpdate(BaseModel):
     question_data: dict
 
 
-def _motion_to_response(motion: Motion) -> MotionResponse:
+def _motion_to_response(motion: Motion, case_number: Optional[str] = None) -> MotionResponse:
     return MotionResponse(
         id=str(motion.id),
         motion_type=motion.motion_type.value if hasattr(motion.motion_type, "value") else motion.motion_type,
@@ -61,12 +64,21 @@ def _motion_to_response(motion: Motion) -> MotionResponse:
         filing_track=motion.filing_track,
         courthouse=motion.courthouse,
         intake_data=motion.intake_data,
+        case_number=case_number,
         created_at=motion.created_at,
         updated_at=motion.updated_at,
     )
 
 
+async def _user_case_number(current_user: User, db: AsyncSession) -> Optional[str]:
+    result = await db.execute(
+        select(Profile.case_number).where(Profile.user_id == current_user.id)
+    )
+    return result.scalar_one_or_none()
+
+
 def _validate_motion_type(motion_type: str) -> MotionType:
+    motion_type = motion_type.upper()
     valid_types = [e.value for e in MotionType]
     if motion_type not in valid_types:
         raise HTTPException(
@@ -114,7 +126,8 @@ async def list_motions(
         .order_by(Motion.created_at.desc())
     )
     motions = result.scalars().all()
-    return [_motion_to_response(m) for m in motions]
+    case_number = await _user_case_number(current_user, db)
+    return [_motion_to_response(m, case_number) for m in motions]
 
 
 @router.get("/{motion_id}")
@@ -148,6 +161,7 @@ async def get_motion(
         "status": motion.status,
         "title": motion.title,
         "description": motion.description,
+        "case_number": await _user_case_number(current_user, db),
         "case_caption": motion.case_caption,
         "filing_track": motion.filing_track,
         "courthouse": motion.courthouse,

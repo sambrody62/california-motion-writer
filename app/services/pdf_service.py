@@ -263,7 +263,10 @@ class PDFService:
         llm_sections: List[Dict[str, Any]]
     ) -> bytes:
         """Generate complete motion PDF with all sections"""
-        
+
+        # Callers may pass the MotionType enum; a plain Enum never equals its value
+        motion_type = motion_type.value if hasattr(motion_type, "value") else str(motion_type)
+
         # Determine which form to use
         form_type = "FL-300" if motion_type == "RFO" else "FL-320"
         

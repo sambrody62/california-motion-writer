@@ -81,13 +81,15 @@ class TestSupabaseStorageBackend:
         assert "etc" not in post.call_args.args[0].replace("passwd", "")
         assert path.endswith("/passwd")
 
-    def test_supabase_failure_falls_back_to_disk(self, monkeypatch, tmp_path):
+    def test_supabase_failure_raises_without_disk_fallback(self, monkeypatch, tmp_path):
+        # A silent local fallback loses files on ephemeral hosting while the
+        # DB row claims they exist — failures must surface to the caller.
         self._configure(monkeypatch)
         monkeypatch.chdir(tmp_path)
         with patch("httpx.post", side_effect=RuntimeError("network down")):
-            path = evidence_storage_service.save_file("motion-1", "a.txt", b"data")
-        assert path == str(tmp_path / "uploads" / "motion-1" / "a.txt") or path == "uploads/motion-1/a.txt"
-        assert (tmp_path / "uploads" / "motion-1" / "a.txt").read_bytes() == b"data"
+            with pytest.raises(evidence_storage_service.EvidenceStorageError):
+                evidence_storage_service.save_file("motion-1", "a.txt", b"data")
+        assert not (tmp_path / "uploads").exists()
 
     def test_default_backend_unchanged_without_flag(self, monkeypatch, tmp_path):
         monkeypatch.delenv("STORAGE_BACKEND", raising=False)

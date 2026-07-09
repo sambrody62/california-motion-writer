@@ -198,7 +198,13 @@ async def upload_evidence(
         except ValueError:
             raise HTTPException(status_code=400, detail="source_date must be YYYY-MM-DD")
 
-    storage_path = evidence_storage_service.save_file(motion_id, clean_name, content)
+    try:
+        storage_path = evidence_storage_service.save_file(motion_id, clean_name, content)
+    except evidence_storage_service.EvidenceStorageError:
+        raise HTTPException(
+            status_code=502,
+            detail="We couldn't store your file — nothing was saved. Please try again.",
+        )
 
     ev = Evidence(
         motion_id=motion_id,

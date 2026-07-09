@@ -15,6 +15,7 @@ export const EvidenceManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     loadEvidence();
@@ -33,14 +34,19 @@ export const EvidenceManager: React.FC = () => {
   };
 
   const handleSave = async (payload: any) => {
-    const { file, ...fields } = payload;
-    if (file) {
-      await evidenceAPI.upload(motionId!, file, fields);
-    } else {
-      await evidenceAPI.create(motionId!, fields);
+    try {
+      setSaveError(null);
+      const { file, ...fields } = payload;
+      if (file) {
+        await evidenceAPI.upload(motionId!, file, fields);
+      } else {
+        await evidenceAPI.create(motionId!, fields);
+      }
+      setShowForm(false);
+      await loadEvidence();
+    } catch {
+      setSaveError('Upload failed — your evidence was not saved. Please try again.');
     }
-    setShowForm(false);
-    await loadEvidence();
   };
 
   const handleRemove = async (id: string) => {
@@ -103,6 +109,11 @@ export const EvidenceManager: React.FC = () => {
         {/* Add form */}
         {showForm && (
           <div className="mb-6">
+            {saveError && (
+              <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+                <p className="text-sm text-red-700">{saveError}</p>
+              </div>
+            )}
             <EvidenceForm
               motionId={motionId!}
               onSave={handleSave}

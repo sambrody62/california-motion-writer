@@ -187,6 +187,30 @@ describe('EvidenceManager — create text evidence', () => {
       );
     });
   });
+
+  test('a failed save shows an error and keeps the form open', async () => {
+    const user = userEvent.setup();
+    mockEvidenceCreate.mockRejectedValue(new Error('storage down'));
+    renderManager();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /add evidence/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add evidence/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^Threat$/i)).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByRole('textbox', { name: /description/i }), 'Threatening message');
+    await user.type(screen.getByRole('textbox', { name: /message text/i }), 'You will regret this');
+    fireEvent.click(screen.getByLabelText(/^Threat$/i));
+    fireEvent.click(screen.getByRole('checkbox', { name: /confirmed accurate/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save evidence/i }));
+
+    expect(await screen.findByText(/your evidence was not saved/i)).toBeInTheDocument();
+    // Form stays open so the user can retry without retyping
+    expect(screen.getByRole('button', { name: /save evidence/i })).toBeInTheDocument();
+  });
 });
 
 // ── 4. Upload requires transcription before submit enabled ───────────────────

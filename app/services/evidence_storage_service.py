@@ -4,8 +4,9 @@ Evidence file storage service.
 Backend is selected by STORAGE_BACKEND env: supabase | gcs | local.
 When unset, falls back to the original behavior (GCS if USE_GCP and the
 library is available, otherwise local disk under uploads/{motion_id}/).
-Uploads never hard-fail into the request path — on backend error the file
-is written to local disk so user evidence is not lost.
+Remote-backend errors raise EvidenceStorageError so the request fails
+loudly — a silent local-disk fallback loses files on ephemeral hosting
+while the DB row claims they exist. Local disk is only for backend=local.
 """
 import os
 import logging
@@ -16,6 +17,11 @@ import httpx
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class EvidenceStorageError(RuntimeError):
+    """A storage backend failed to persist an evidence file."""
+
 
 USE_GCP = os.getenv("USE_GCP", "true").lower() == "true"
 
@@ -88,8 +94,8 @@ def _save_to_supabase(motion_id: str, filename: str, content: bytes) -> str:
             raise RuntimeError(f"Supabase storage returned {response.status_code}")
         return f"supabase://{bucket}/{object_path}"
     except Exception as exc:
-        logger.error("Supabase upload failed for motion=%s; falling back to disk: %s", motion_id, exc)
-        return _save_to_disk(motion_id, filename, content)
+        logger.error("Supabase upload failed for motion=%s: %s", motion_id, exc)
+        raise EvidenceStorageError("Supabase upload failed") from exc
 
 
 def _save_to_gcs(motion_id: str, filename: str, content: bytes) -> str:
@@ -101,5 +107,5 @@ def _save_to_gcs(motion_id: str, filename: str, content: bytes) -> str:
         blob.upload_from_string(content)
         return f"gs://{settings.GCS_BUCKET}/{blob_name}"
     except Exception as exc:
-        logger.error("GCS upload failed for evidence id=%s; falling back to disk: %s", motion_id, exc)
-        return _save_to_disk(motion_id, filename, content)
+        logger.error("GCS upload failed for motion=%s: %s", motion_id, exc)
+        raise EvidenceStorageError("GCS upload failed") from exc

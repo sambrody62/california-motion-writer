@@ -155,11 +155,11 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Get Legal Help for Your Family Law Case
+            Prepare Your California Family Court Documents
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Tell us about your family law situation and we'll create a personalized legal strategy,
-            determine which California court forms you need, and help you fill them out correctly.
+            Tell us about your family law situation and we'll build a personalized action plan,
+            identify which California court forms you need, and help you fill them out correctly.
           </p>
 
           <button
@@ -224,9 +224,9 @@ export const Dashboard: React.FC = () => {
               <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <span className="text-2xl font-bold text-green-600">2</span>
               </div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Get Your Strategy</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">Get Your Action Plan</h4>
               <p className="text-gray-600">
-                Our AI creates a personalized legal gameplan and determines exactly which California forms you need.
+                Our AI creates a personalized action plan and determines exactly which California forms you need.
               </p>
             </div>
 

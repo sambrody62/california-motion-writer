@@ -11,9 +11,9 @@ export const GameplanSections: React.FC<{ gameplan: GameplanData }> = ({ gamepla
       <p className="text-gray-700">{gameplan.analysis}</p>
     </div>
 
-    {/* Recommended Strategy */}
+    {/* Recommended Approach */}
     <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommended Strategy</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommended Approach</h2>
       <p className="text-gray-700">{gameplan.legalStrategy}</p>
     </div>
 

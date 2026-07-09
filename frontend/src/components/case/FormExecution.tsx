@@ -106,7 +106,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
             Fill Out Your Court Forms
           </h1>
           <p className="text-lg text-gray-600">
-            Complete each form based on your legal strategy
+            Complete each form based on your action plan
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
                   Why you need this form:
                 </h3>
                 <p className="text-sm text-blue-700">
-                  Based on your case analysis, this form is needed to implement your legal strategy.
+                  Based on your case analysis, this form is needed to carry out your action plan.
                   The information you provided will be used to pre-populate relevant fields.
                 </p>
               </div>
@@ -268,7 +268,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
         {/* Strategy Reminder */}
         <div className="mt-8 bg-gray-100 rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-3">
-            Remember Your Strategy
+            Remember Your Plan
           </h3>
           <p className="text-gray-700 mb-4">{gameplan.legalStrategy}</p>
           <div className="text-sm text-gray-600">

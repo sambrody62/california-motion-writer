@@ -75,6 +75,20 @@ describe('Dashboard', () => {
     });
   });
 
+  test('describes the product as document preparation, not legal help', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Prepare Your California Family Court Documents')
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Get Legal Help/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/legal strategy/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/legal gameplan/i)).not.toBeInTheDocument();
+  });
+
   test('shows profile setup notice when no profile exists', async () => {
     renderWithRouter(<Dashboard />);
 
@@ -145,7 +159,7 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('How It Works')).toBeInTheDocument();
       expect(screen.getByText('Explain Your Case')).toBeInTheDocument();
-      expect(screen.getByText('Get Your Strategy')).toBeInTheDocument();
+      expect(screen.getByText('Get Your Action Plan')).toBeInTheDocument();
       expect(screen.getByText('File Your Forms')).toBeInTheDocument();
     });
   });

@@ -64,7 +64,7 @@ export const CaseIntake: React.FC = () => {
             Tell Us About Your Case
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Explain your family law situation and we'll help create a legal strategy and determine which court forms you need to file.
+            Explain your family law situation and we'll help create an action plan and determine which court forms you need to file.
           </p>
         </div>
 
@@ -95,10 +95,10 @@ export const CaseIntake: React.FC = () => {
                       <SparklesIcon className="h-6 w-6 text-indigo-600 mr-3" />
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
-                          I need help creating a strategy
+                          I need help creating a plan
                         </h3>
                         <p className="text-sm text-gray-500">
-                          Tell us your situation and we'll create a legal gameplan
+                          Tell us your situation and we'll create an action plan
                         </p>
                       </div>
                     </div>
@@ -146,7 +146,7 @@ export const CaseIntake: React.FC = () => {
               {!hasExistingGameplan && (
                 <div className="mb-4 bg-blue-50 border-l-4 border-blue-400 p-4">
                   <p className="text-sm text-blue-700 font-medium mb-2">
-                    To create the best legal strategy, please answer these questions:
+                    To create the best action plan, please answer these questions:
                   </p>
                   <ul className="text-sm text-blue-600 space-y-2 list-none">
                     <li>📍 <strong>Your current status:</strong> Are you married, separated, or divorced?</li>
@@ -191,7 +191,7 @@ export const CaseIntake: React.FC = () => {
               <p className="mt-2 text-sm text-gray-500">
                 {hasExistingGameplan
                   ? 'Provide a brief overview since you already have a gameplan'
-                  : '💡 Tip: Include specific details about your situation. The more information you provide, the more accurate your legal strategy will be.'
+                  : '💡 Tip: Include specific details about your situation. The more information you provide, the more accurate your action plan will be.'
                 }
               </p>
             </div>
@@ -200,7 +200,7 @@ export const CaseIntake: React.FC = () => {
             {hasExistingGameplan && (
               <div>
                 <label htmlFor="existingGameplan" className="block text-lg font-medium text-gray-900 mb-3">
-                  Your existing legal gameplan
+                  Your existing gameplan
                 </label>
                 <div className="mt-1">
                   <textarea

@@ -56,6 +56,14 @@ describe('GameplanCreation', () => {
     expect(screen.queryByText(/couldn't generate a personalized plan/i)).toBeNull();
   });
 
+  test('titles the plan as an action plan, not a legal strategy', async () => {
+    mockSendMessage.mockResolvedValue(RICH_RESPONSE);
+    renderPage();
+
+    expect(await screen.findByText('Your Action Plan')).toBeInTheDocument();
+    expect(screen.queryByText(/legal strategy/i)).toBeNull();
+  });
+
   test('shows an honest fallback state when the LLM output is unparseable', async () => {
     mockSendMessage.mockResolvedValue('OK');
     renderPage();

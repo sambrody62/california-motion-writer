@@ -304,7 +304,7 @@ class CostMonitoringService:
         max_tokens: Optional[int] = None
     ) -> Dict:
         """Optimize token usage based on operation type"""
-        from app.middleware.rate_limiter import TOKEN_LIMITS
+        from app.middleware.rate_limit_config import TOKEN_LIMITS
 
         # Get recommended token limit
         recommended_limit = TOKEN_LIMITS.get(operation_type, 3000)

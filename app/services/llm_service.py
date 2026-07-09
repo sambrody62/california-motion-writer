@@ -27,7 +27,7 @@ elif not USE_MOCK_LLM and not USE_CLAUDE:
     print("Warning: no LLM backend configured (USE_GCP=false), using mock LLM")
 
 from app.core.config import settings
-from app.middleware.rate_limiter import get_token_limit
+from app.middleware.rate_limit_config import get_token_limit
 from app.services.cost_monitoring_service import track_llm_cost, check_budget
 import logging
 

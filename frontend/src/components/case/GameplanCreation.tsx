@@ -4,26 +4,23 @@ import { useForm } from 'react-hook-form';
 import {
   SparklesIcon,
   CheckCircleIcon,
-  DocumentTextIcon,
   ArrowRightIcon,
   PencilIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { FORM_METADATA, FormType } from '../../types/forms';
 import { chat } from '../../services/api';
+import {
+  GameplanData,
+  parseLLMResponse,
+  extractResponseText,
+  detectsEnforcementIntent,
+} from '../../utils/gameplanParser';
+import { GameplanSections } from './GameplanSections';
+import { EnforcementTriage } from './EnforcementTriage';
 
 interface LocationState {
   caseDescription: string;
   existingGameplan?: string;
-}
-
-interface GameplanData {
-  analysis: string;
-  legalStrategy: string;
-  recommendedForms: FormType[];
-  timeline: string;
-  keyConsiderations: string[];
-  nextSteps: string[];
 }
 
 export const GameplanCreation: React.FC = () => {
@@ -31,6 +28,7 @@ export const GameplanCreation: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [gameplan, setGameplan] = useState<GameplanData | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showEnforcementTriage, setShowEnforcementTriage] = useState(false);
@@ -91,26 +89,12 @@ Please provide specific, actionable guidance for my California family law case.`
 
       // Send message to get gameplan
       const messageResponse = await chat.sendMessage(newSessionId, prompt);
-
-      // Extract response text from the response structure
-      let responseText = '';
-      if (typeof messageResponse === 'string') {
-        responseText = messageResponse;
-      } else if (messageResponse.response) {
-        responseText = typeof messageResponse.response === 'string'
-          ? messageResponse.response
-          : messageResponse.response.response || JSON.stringify(messageResponse.response);
-      } else if (messageResponse.data) {
-        responseText = typeof messageResponse.data === 'string'
-          ? messageResponse.data
-          : messageResponse.data.response || JSON.stringify(messageResponse.data);
-      } else {
-        responseText = JSON.stringify(messageResponse);
-      }
+      const responseText = extractResponseText(messageResponse);
 
       // Parse the LLM response into structured data
-      const parsedGameplan = parseLLMResponse(responseText);
-      setGameplan(parsedGameplan);
+      const parsed = parseLLMResponse(responseText);
+      setGameplan(parsed.data);
+      setIsFallback(parsed.isFallback);
 
       // Check whether the case description or response mentions violations/enforcement
       const combinedText = `${state.caseDescription} ${responseText}`;
@@ -124,81 +108,6 @@ Please provide specific, actionable guidance for my California family law case.`
     }
   };
 
-  const detectsEnforcementIntent = (text: string): boolean => {
-    const lower = text.toLowerCase();
-    const keywords = ['violation', 'violat', 'enforce', 'contempt', 'not following', 'disobeying', 'not comply', 'non-compliance'];
-    return keywords.some(kw => lower.includes(kw));
-  };
-
-  const parseLLMResponse = (response: string): GameplanData => {
-    // Parse the LLM response to extract structured information
-    // This is a simplified parser - in production you'd want more robust parsing
-
-    const lines = response.split('\n').filter(line => line.trim());
-
-    // Extract recommended forms by looking for form codes
-    const formCodes = ['FL-300', 'FL-320', 'D-046', 'FL-305', 'FL-150', 'FL-335', 'FL-410', 'FL-411', 'MC-030'];
-    const recommendedForms: FormType[] = [];
-
-    formCodes.forEach(code => {
-      if (response.toUpperCase().includes(code)) {
-        recommendedForms.push(code as FormType);
-      }
-    });
-
-    // If no forms detected, default to FL-300 (Request for Order)
-    if (recommendedForms.length === 0) {
-      recommendedForms.push('FL-300');
-    }
-
-    return {
-      analysis: extractSection(response, ['analysis', 'situation', 'case analysis']) || 'Legal situation analysis',
-      legalStrategy: extractSection(response, ['strategy', 'legal strategy', 'approach']) || 'Legal strategy recommendation',
-      recommendedForms,
-      timeline: extractSection(response, ['timeline', 'timeframe', 'schedule']) || 'Recommended filing timeline',
-      keyConsiderations: extractListItems(response, ['considerations', 'challenges', 'important']),
-      nextSteps: extractListItems(response, ['next steps', 'actions', 'steps'])
-    };
-  };
-
-  const extractSection = (text: string, keywords: string[]): string | null => {
-    const lines = text.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      if (keywords.some(keyword => line.includes(keyword))) {
-        // Look for content in next few lines
-        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-          const nextLine = lines[j].trim();
-          if (nextLine && !nextLine.match(/^\d+\./) && nextLine.length > 20) {
-            return nextLine;
-          }
-        }
-      }
-    }
-    return null;
-  };
-
-  const extractListItems = (text: string, keywords: string[]): string[] => {
-    const items: string[] = [];
-    const lines = text.split('\n');
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      if (keywords.some(keyword => line.includes(keyword))) {
-        // Look for list items in next lines
-        for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
-          const nextLine = lines[j].trim();
-          if (nextLine.match(/^[-*•]\s/) || nextLine.match(/^\d+\.\s/)) {
-            items.push(nextLine.replace(/^[-*•]\s/, '').replace(/^\d+\.\s/, ''));
-          }
-        }
-        break;
-      }
-    }
-
-    return items.length > 0 ? items : ['Consult with legal professional', 'Gather required documentation', 'File forms within deadline'];
-  };
-
   const refineGameplan = async (data: { customization: string }) => {
     if (!sessionId || !data.customization.trim()) return;
 
@@ -209,25 +118,11 @@ Please provide specific, actionable guidance for my California family law case.`
 Please provide an updated structured response with any necessary changes to the strategy, forms, or timeline.`;
 
       const messageResponse = await chat.sendMessage(sessionId, refinePrompt);
+      const responseText = extractResponseText(messageResponse);
 
-      // Extract response text from the response structure
-      let responseText = '';
-      if (typeof messageResponse === 'string') {
-        responseText = messageResponse;
-      } else if (messageResponse.response) {
-        responseText = typeof messageResponse.response === 'string'
-          ? messageResponse.response
-          : messageResponse.response.response || JSON.stringify(messageResponse.response);
-      } else if (messageResponse.data) {
-        responseText = typeof messageResponse.data === 'string'
-          ? messageResponse.data
-          : messageResponse.data.response || JSON.stringify(messageResponse.data);
-      } else {
-        responseText = JSON.stringify(messageResponse);
-      }
-
-      const refinedGameplan = parseLLMResponse(responseText);
-      setGameplan(refinedGameplan);
+      const parsed = parseLLMResponse(responseText);
+      setGameplan(parsed.data);
+      setIsFallback(parsed.isFallback);
       setValue('customization', '');
 
       const combinedText = `${state.caseDescription} ${data.customization} ${responseText}`;
@@ -297,92 +192,42 @@ Please provide an updated structured response with any necessary changes to the 
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Header */}
+        {/* Header — honest about whether the plan is personalized */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="bg-green-100 p-3 rounded-full">
-              <CheckCircleIcon className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Your Legal Strategy
-          </h1>
-          <p className="text-lg text-gray-600">
-            Here's your personalized gameplan based on your case details
-          </p>
+          {isFallback ? (
+            <>
+              <div className="flex justify-center mb-4">
+                <div className="bg-amber-100 p-3 rounded-full">
+                  <ExclamationTriangleIcon className="h-8 w-8 text-amber-600" />
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                We couldn't generate a personalized plan
+              </h1>
+              <p className="text-lg text-gray-600">
+                Here's a general checklist to get you started — these steps are not tailored to your case.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-center mb-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <CheckCircleIcon className="h-8 w-8 text-green-600" />
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                Your Legal Strategy
+              </h1>
+              <p className="text-lg text-gray-600">
+                Here's your personalized gameplan based on your case details
+              </p>
+            </>
+          )}
         </div>
 
         {gameplan && (
           <>
-            {/* Case Analysis */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Case Analysis</h2>
-              <p className="text-gray-700">{gameplan.analysis}</p>
-            </div>
-
-            {/* Legal Strategy */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Recommended Strategy</h2>
-              <p className="text-gray-700">{gameplan.legalStrategy}</p>
-            </div>
-
-            {/* Recommended Forms */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Required Court Forms</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {gameplan.recommendedForms.map((formType) => {
-                  const formMeta = FORM_METADATA[formType];
-                  return (
-                    <div key={formType} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <DocumentTextIcon className="h-5 w-5 text-indigo-600 mr-3" />
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900">
-                            {formMeta.name} ({formMeta.id})
-                          </h3>
-                          <p className="text-sm text-gray-500">{formMeta.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Timeline and Considerations */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Timeline</h2>
-                <p className="text-gray-700">{gameplan.timeline}</p>
-              </div>
-
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Key Considerations</h2>
-                <ul className="space-y-2">
-                  {gameplan.keyConsiderations.map((consideration, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="flex-shrink-0 h-2 w-2 bg-indigo-600 rounded-full mt-2 mr-3"></span>
-                      <span className="text-gray-700">{consideration}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Next Steps */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Next Steps</h2>
-              <ol className="space-y-3">
-                {gameplan.nextSteps.map((step, index) => (
-                  <li key={index} className="flex">
-                    <span className="flex-shrink-0 bg-indigo-600 text-white text-sm font-medium rounded-full h-6 w-6 flex items-center justify-center mr-3">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-700">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <GameplanSections gameplan={gameplan} />
 
             {/* Refinement Section */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -413,46 +258,11 @@ Please provide an updated structured response with any necessary changes to the 
               </form>
             </div>
 
-            {/* Enforcement triage (Journey 8): shown when case involves violations */}
             {showEnforcementTriage && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                  Your case may involve order enforcement
-                </h2>
-                <p className="text-sm text-gray-700 mb-4">
-                  Based on what you described, there may be two paths forward. Each has different requirements — choose the one that fits your situation.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-white border border-gray-200 rounded-md p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Request for Order (RFO)</h3>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Ask the court to modify or clarify the existing order. Typically faster and uses a preponderance-of-evidence standard.
-                    </p>
-                    <button
-                      onClick={proceedToForms}
-                      aria-label="Proceed with Request for Order"
-                      className="w-full inline-flex items-center justify-center px-3 py-2 border border-indigo-300 text-xs font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      Continue with RFO
-                      <ArrowRightIcon className="h-3 w-3 ml-1" />
-                    </button>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-md p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Contempt of Court</h3>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Seek to hold the other party in contempt for willfully violating the order. Requires a higher proof standard (beyond a reasonable doubt).
-                    </p>
-                    <button
-                      onClick={() => navigate('/violation/intake')}
-                      aria-label="Proceed with contempt / violation enforcement"
-                      className="w-full inline-flex items-center justify-center px-3 py-2 border border-amber-400 text-xs font-medium rounded-md text-amber-800 bg-white hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-400"
-                    >
-                      Enforce via contempt
-                      <ArrowRightIcon className="h-3 w-3 ml-1" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <EnforcementTriage
+                onProceedRFO={proceedToForms}
+                onProceedViolation={() => navigate('/violation/intake')}
+              />
             )}
 
             {/* Proceed Button */}

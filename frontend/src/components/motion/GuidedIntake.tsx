@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motionAPI, intakeAPI } from '../../services/api';
-import { FORM_METADATA, FormType, FORM_TYPES } from '../../types/forms';
+import { FORM_TYPES } from '../../types/forms';
 import { addCourtDays, formatCourtDeadline } from '../../utils/courtDays';
 import { Question } from './QuestionField';
+import { getFormTitle, IntakeStep } from './formTitle';
 import { ServedMotionUpload } from './ServedMotionUpload';
 import { ServedMotionExtracted } from '../../services/servedMotionApi';
 import { useMotionInit } from './useMotionInit';
@@ -12,14 +13,7 @@ import { useIntakePrefill } from './useIntakePrefill';
 import { IntakeProgressBar, IntakeStepDots } from './IntakeProgress';
 import { IntakeStepForm } from './IntakeStepForm';
 import { IntakeNotices } from './IntakeNotices';
-
-interface IntakeStep {
-  step_number: number;
-  step_name: string;
-  description: string;
-  questions: Question[];
-  total_steps?: number;
-}
+import { IntakeErrorBanner } from './IntakeErrorBanner';
 
 interface GuidedIntakeProps {
   onComplete?: (motionId: string) => void;
@@ -44,6 +38,8 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const [processingLLM, setProcessingLLM] = useState(false);
   const [visibleQuestions, setVisibleQuestions] = useState<Question[]>([]);
   const [allAnswers, setAllAnswers] = useState<any>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [responseDeadline, setResponseDeadline] = useState<string | null>(null);
   // FL-320: skippable "upload the motion you were served" gate before step 1.
   // Resume skips it — the served motion was already handled on first entry.
@@ -60,14 +56,6 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
     uploadPrefilledFields,
     acceptUploadExtracted,
   } = useIntakePrefill({ stepData, getValues, setValue });
-
-  const getFormTitle = () => {
-    if (!currentFormType) return 'Form';
-    if (currentFormType === 'RFO') return 'Request for Order (FL-300)';
-    if (currentFormType === 'Response') return 'Response to RFO (FL-320)';
-    const formMetadata = FORM_METADATA[currentFormType as FormType];
-    return formMetadata ? `${formMetadata.name} (${formMetadata.id})` : currentFormType;
-  };
 
   useEffect(() => {
     if (motionId) {
@@ -109,6 +97,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const loadStep = async (stepNumber: number) => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await intakeAPI.getQuestions(currentFormType!, stepNumber);
       setStepData(response.data);
 
@@ -129,6 +118,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       }
     } catch (error) {
       console.error('Failed to load step:', error);
+      setLoadError("We couldn't load this step — check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -164,6 +154,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
 
   const onSubmit = async (data: any) => {
     try {
+      setSaveError(null);
       await motionAPI.saveDraft(motionId!, {
         step_number: currentStep,
         step_name: stepData?.step_name || `step_${currentStep}`,
@@ -210,6 +201,9 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       });
     } catch (error) {
       console.error('Failed to save step:', error);
+      setSaveError(
+        "We couldn't save this step — your answers are still on screen. Check your connection and try again."
+      );
     }
   };
 
@@ -254,11 +248,14 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <IntakeProgressBar title={getFormTitle()} currentStep={currentStep} totalSteps={totalSteps} />
+        <IntakeProgressBar title={getFormTitle(currentFormType)} currentStep={currentStep} totalSteps={totalSteps} />
 
         {/* Step Content */}
         <div className="bg-white shadow rounded-lg p-6">
-          {stepData && (
+          {loadError && (
+            <IntakeErrorBanner message={loadError} onRetry={() => loadStep(currentStep)} />
+          )}
+          {stepData && !loadError && (
             <>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 {stepData.step_name}
@@ -270,6 +267,8 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
                 showUploadNotice={currentStep === 1}
                 responseDeadline={responseDeadline}
               />
+
+              {saveError && <IntakeErrorBanner message={saveError} />}
 
               <IntakeStepForm
                 visibleQuestions={visibleQuestions}

@@ -32,3 +32,10 @@
 6. **Verify by driving the live app, not only test suites.** Both suites were green
    while the core user flow was unusable (wrong mocks, missing route). The Playwright
    run found two bugs the suites structurally could not.
+
+## 2026-07-08 — fix/known-issues session
+- Run frontend tests via `npm run test:ci` (react-scripts), never `npx jest` directly — bare jest skips CRA's babel/TS transform and every suite fails with syntax errors.
+- Don't chain `test | grep pattern && git commit` — grep matching output lines returns 0 even when tests failed. Check the summary line explicitly before committing (one commit briefly landed with a failing test and needed --amend).
+- Under Jest, react-router-dom v7 only exposes `BrowserRouter`/`Router`; `MemoryRouter` is undefined. Use `BrowserRouter` + `window.history.pushState` for route-dependent tests (existing pattern in Dashboard.test.tsx).
+- Jest's babel transform accepts JSX the production build rejects (e.g. `unknown && <jsx>` children → TS2746). Run `npm run build` before finishing any component extraction.
+- Backend evidence upload form field `tags` expects a JSON array string ('["threat"]'), not a bare tag name.

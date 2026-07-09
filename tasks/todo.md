@@ -193,16 +193,24 @@ verification pending ANTHROPIC_API_KEY.
 
 Plan: ~/.claude/plans/temporal-whistling-engelbart.md. TDD; one conventional commit per step.
 
-- [ ] R1. refactor(api): remove dead WebSocket chat endpoint
-- [ ] R2. refactor(frontend): remove chat entry points and dead chat UI
-- [ ] R3. refactor(auth)!: backend JWT only; delete Firebase layer
-- [ ] R4. fix(intake): edit/resume loads existing motion (no orphan drafts)
-- [ ] R5. fix(intake): surface step save/load failures inline with retry
-- [ ] R6. fix(preview): only claim legal-format rewrite when LLM output exists
-- [ ] R7. fix(gameplan): honest fallback when personalized plan unavailable
-- [ ] R8. fix(copy): replace UPL-risky "legal help/strategy" language
-- [ ] R9. feat(legal): global disclaimer footer; FilingChecklist after PDF download
-- [ ] R10. fix(evidence): delete confirmation + error surfacing
-- [ ] R11. fix(storage): evidence upload fails loudly on backend storage errors
-- [ ] R12. feat(api): enforce rate limits on LLM, PDF, auth routes
-- [ ] R13. fix(logging): strip PII logging; gate SQL echo behind SQL_ECHO
+- [x] R1. refactor(api): remove dead WebSocket chat endpoint
+- [x] R2. refactor(frontend): remove chat entry points and dead chat UI
+- [x] R3. refactor(auth)!: backend JWT only; delete Firebase layer
+- [x] R4. fix(intake): edit/resume loads existing motion (no orphan drafts)
+- [x] R5. fix(intake): surface step save/load failures inline with retry
+- [x] R6. fix(preview): only claim legal-format rewrite when LLM output exists
+- [x] R7. fix(gameplan): honest fallback when personalized plan unavailable
+- [x] R8. fix(copy): replace UPL-risky "legal help/strategy" language
+- [x] R9. feat(legal): global disclaimer footer; FilingChecklist after PDF download
+- [x] R10. fix(evidence): delete confirmation + error surfacing
+- [x] R11. fix(storage): evidence upload fails loudly on backend storage errors
+- [x] R12. feat(api): enforce rate limits on LLM, PDF, auth routes
+- [x] R13. fix(logging): strip PII logging; gate SQL echo behind SQL_ECHO
+
+### Review (2026-07-08)
+All 13 remediation items implemented TDD-first on `fix/known-issues` (13 commits + build fix).
+- Backend: 381 passed, 3 xfailed. Frontend: 205 passed, 28 suites. `npm run build` compiles.
+- New tests: test_ws_removed, test_evidence_storage_failure, test_rate_limiting, test_logging_hygiene (backend); FlowSelectors, Auth, GuidedIntakeResume, GuidedIntakeErrors, GameplanCreation, gameplanParser, LegalFooter, EvidenceDelete, ProfileSetup (frontend).
+- 300-line rule: GuidedIntake 296, GameplanCreation 284, MotionPreview 289, rate_limiter 184 (extractions: useMotionInit, useIntakePrefill, IntakeStepForm, IntakeProgress, IntakeNotices, IntakeErrorBanner, gameplanParser, GameplanSections, EnforcementTriage, MotionPreviewBanners, rate_limit_config, usage_quotas).
+- Deferred (known follow-ups): delete dead backend services/main_local.py (its /ws is unreachable), Firebase root artifacts (firebase.json etc.), cost counters to DB, docs rewrite (CLAUDE.md/README still describe GCP).
+- Pre-existing, untouched: 4 tsc --noEmit errors in old test files; exhaustive-deps lint warnings.

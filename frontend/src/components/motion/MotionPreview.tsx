@@ -41,6 +41,7 @@ export const MotionPreview: React.FC = () => {
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const llmFailed = locationState?.llmFailed === true;
+  const hasLLMContent = drafts.some((draft) => !!draft.llm_output);
 
   useEffect(() => {
     loadMotionData();
@@ -187,19 +188,21 @@ export const MotionPreview: React.FC = () => {
           </div>
         )}
 
-        {/* Status Banner */}
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-400" aria-hidden="true" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                Your motion has been processed and is ready for review. The content has been rewritten in proper legal format.
-              </p>
+        {/* Status Banner — only claim a rewrite when LLM output actually exists */}
+        {hasLLMContent && !llmFailed && (
+          <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <CheckCircleIcon className="h-5 w-5 text-green-400" aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">
+                  Your motion has been processed and is ready for review. The content has been rewritten in proper legal format.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Evidence & Exhibits section */}
         <div className="bg-white shadow rounded-lg p-5 mb-6">

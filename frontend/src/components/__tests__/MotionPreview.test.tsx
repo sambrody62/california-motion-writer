@@ -171,4 +171,43 @@ describe('MotionPreview', () => {
       screen.queryByText(/couldn't polish your wording/i)
     ).not.toBeInTheDocument();
   });
+
+  test('shows the rewritten-format banner only when drafts have LLM output', async () => {
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smith v. Smith')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/rewritten in proper legal format/i)).toBeInTheDocument();
+  });
+
+  test('hides the rewritten-format banner when no draft has LLM output', async () => {
+    mockGetDrafts.mockResolvedValue([
+      { ...mockDrafts[0], llm_output: null },
+    ]);
+
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smith v. Smith')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/rewritten in proper legal format/i)).not.toBeInTheDocument();
+  });
+
+  test('hides the rewritten-format banner when the LLM failed, even with stale output', async () => {
+    mockUseLocation.mockReturnValue({
+      state: { llmFailed: true },
+      pathname: '/motion/motion-123/preview',
+    });
+
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't polish your wording/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/rewritten in proper legal format/i)).not.toBeInTheDocument();
+  });
 });

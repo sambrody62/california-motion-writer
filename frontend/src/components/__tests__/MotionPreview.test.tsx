@@ -24,6 +24,7 @@ jest.mock('date-fns', () => ({
 const mockGetMotion = jest.fn();
 const mockGetDrafts = jest.fn();
 const mockGeneratePDFSync = jest.fn();
+const mockGetProfile = jest.fn();
 
 jest.mock('../../services/api', () => ({
   motionAPI: {
@@ -32,6 +33,9 @@ jest.mock('../../services/api', () => ({
   },
   documentAPI: {
     generatePDFSync: (...args: any[]) => mockGeneratePDFSync(...args),
+  },
+  profileAPI: {
+    get: (...args: any[]) => mockGetProfile(...args),
   },
 }));
 
@@ -75,6 +79,7 @@ describe('MotionPreview', () => {
     mockGetMotion.mockResolvedValue(mockMotion);
     mockGetDrafts.mockResolvedValue(mockDrafts);
     mockGeneratePDFSync.mockResolvedValue(new ArrayBuffer(100));
+    mockGetProfile.mockRejectedValue(new Error('No profile'));
   });
 
   test('renders motion preview with case info', async () => {
@@ -209,5 +214,21 @@ describe('MotionPreview', () => {
     });
 
     expect(screen.queryByText(/rewritten in proper legal format/i)).not.toBeInTheDocument();
+  });
+
+  test('shows the filing checklist only after the PDF is downloaded', async () => {
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smith v. Smith')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('heading', { name: /filing checklist/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Download PDF/i })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /filing checklist/i })).toBeInTheDocument();
+    });
   });
 });

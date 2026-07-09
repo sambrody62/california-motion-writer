@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { motionAPI, documentAPI, evidenceAPI } from '../../services/api';
-import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
+import { motionAPI, documentAPI, evidenceAPI, profileAPI } from '../../services/api';
+import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
+import { MotionPreviewBanners } from './MotionPreviewBanners';
+import { FilingChecklist } from './FilingChecklist';
 
 interface MotionDraft {
   step_number: number;
@@ -36,8 +38,10 @@ export const MotionPreview: React.FC = () => {
   const [motion, setMotion] = useState<Motion | null>(null);
   const [drafts, setDrafts] = useState<MotionDraft[]>([]);
   const [evidenceCount, setEvidenceCount] = useState(0);
+  const [county, setCounty] = useState('');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const llmFailed = locationState?.llmFailed === true;
@@ -63,6 +67,13 @@ export const MotionPreview: React.FC = () => {
         setEvidenceCount(Array.isArray(evidenceItems) ? evidenceItems.length : 0);
       } catch {
         setEvidenceCount(0);
+      }
+      // Load county for the filing checklist — non-blocking
+      try {
+        const profile = await profileAPI.get();
+        setCounty(profile?.county || '');
+      } catch {
+        setCounty('');
       }
     } catch (error) {
       console.error('Failed to load motion:', error);
@@ -90,6 +101,7 @@ export const MotionPreview: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      setPdfDownloaded(true);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       setPdfError(
@@ -151,57 +163,17 @@ export const MotionPreview: React.FC = () => {
           </div>
         </div>
 
-        {/* LLM failure notice — non-blocking */}
-        {llmFailed && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  We couldn't polish your wording — your own words are legally valid.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <MotionPreviewBanners
+          llmFailed={llmFailed}
+          hasLLMContent={hasLLMContent}
+          pdfError={pdfError}
+          generating={generating}
+          onRetryPDF={generatePDF}
+        />
 
-        {/* PDF error state */}
-        {pdfError && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm text-red-700">{pdfError}</p>
-              </div>
-              <button
-                onClick={generatePDF}
-                disabled={generating}
-                className="ml-4 text-sm font-medium text-red-700 underline hover:text-red-600 disabled:opacity-50"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Status Banner — only claim a rewrite when LLM output actually exists */}
-        {hasLLMContent && !llmFailed && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-5 w-5 text-green-400" aria-hidden="true" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">
-                  Your motion has been processed and is ready for review. The content has been rewritten in proper legal format.
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Filing checklist — shown once the user has their PDF in hand */}
+        {pdfDownloaded && (
+          <FilingChecklist county={county} motionType={motion?.motion_type || ''} />
         )}
 
         {/* Evidence & Exhibits section */}

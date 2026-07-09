@@ -40,6 +40,13 @@ test('renders California Motion Writer app', () => {
   expect(titleElement).toBeInTheDocument();
 });
 
+test('shows the legal disclaimer footer on every screen, including login', () => {
+  render(<App />);
+  expect(screen.getByText(/document-preparation tool/i)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /terms/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /privacy/i })).toBeInTheDocument();
+});
+
 // EmergencyHelp is a public component — test it directly to verify
 // it renders without any authentication context.
 

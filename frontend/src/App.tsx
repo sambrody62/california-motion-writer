@@ -20,6 +20,7 @@ import { BulkTextImport } from './components/evidence/BulkTextImport';
 import { GmailCallback } from './components/evidence/GmailCallback';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { Terms } from './components/legal/Terms';
+import { LegalFooter } from './components/legal/LegalFooter';
 
 function App() {
   return (
@@ -179,6 +180,7 @@ function App() {
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        <LegalFooter />
       </Router>
     </AuthProvider>
   );

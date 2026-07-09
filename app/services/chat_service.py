@@ -254,7 +254,8 @@ class ChatService:
                     resolved_message = self.memory_service.resolve_references(
                         user_message, memory.entity_references
                     )
-                    logger.info(f"Resolved references: '{user_message}' -> '{resolved_message}'")
+                    # Never log message content — it contains case PII
+                    logger.info("Resolved entity references in user message (session=%s)", session_id)
                 else:
                     resolved_message = user_message
             else:

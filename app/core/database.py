@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 
+def _sql_echo_enabled() -> bool:
+    """SQL echo prints bound parameters (names, case details) — explicit opt-in only."""
+    return os.getenv("SQL_ECHO", "false").lower() == "true"
+
+
 def _normalize_database_url(url: str) -> str:
     """Ensure postgres URLs use the asyncpg driver (Supabase/Render give postgres://)."""
     if url.startswith("postgres://"):
@@ -98,7 +103,7 @@ class Database:
         
         # Create async engine (pool sized for Supabase free tier via env; GCP defaults preserved)
         engine_kwargs = {
-            "echo": True if settings.ENVIRONMENT == "development" else False,
+            "echo": _sql_echo_enabled(),
             "pool_pre_ping": True,
         }
         if not DATABASE_URL.startswith("sqlite"):

@@ -163,7 +163,8 @@ Respond in JSON format:
             return intent, entities, confidence
 
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse LLM response as JSON: {response.text}")
+            # Don't log the response body — it is derived from case content
+            logger.error("Failed to parse LLM response as JSON (%d chars)", len(response.text))
             # Fallback to basic pattern matching
             return self._fallback_intent_classification(message)
         except Exception as e:

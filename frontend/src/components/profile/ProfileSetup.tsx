@@ -53,14 +53,11 @@ export const ProfileSetup: React.FC = () => {
     // Load existing profile if available
     profileAPI.get()
       .then((response: any) => {
-        console.log('Profile API response:', response);
         // The response is already the profile data, not wrapped in a data property
         const profile = response;
 
         // Set form values from the loaded profile
         if (profile) {
-          console.log('Setting form values from profile:', profile);
-
           const formData = {
             case_number: profile.case_number || '',
             county: profile.county || '',
@@ -87,9 +84,8 @@ export const ProfileSetup: React.FC = () => {
           }
         }
       })
-      .catch((error) => {
-        console.log('No profile found or error loading profile:', error);
-        // No profile yet
+      .catch(() => {
+        // No profile yet — the form starts blank
       })
       .finally(() => {
         setLoading(false);

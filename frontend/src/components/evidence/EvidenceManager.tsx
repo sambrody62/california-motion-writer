@@ -14,6 +14,7 @@ export const EvidenceManager: React.FC = () => {
   const [items, setItems] = useState<Evidence[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     loadEvidence();
@@ -43,8 +44,13 @@ export const EvidenceManager: React.FC = () => {
   };
 
   const handleRemove = async (id: string) => {
-    await evidenceAPI.remove(id);
-    setItems((prev) => prev.filter((e) => e.id !== id));
+    try {
+      setDeleteError(null);
+      await evidenceAPI.remove(id);
+      setItems((prev) => prev.filter((e) => e.id !== id));
+    } catch {
+      setDeleteError("We couldn't delete this item — check your connection and try again.");
+    }
   };
 
   if (loading) {
@@ -102,6 +108,12 @@ export const EvidenceManager: React.FC = () => {
               onSave={handleSave}
               onCancel={() => setShowForm(false)}
             />
+          </div>
+        )}
+
+        {deleteError && (
+          <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+            <p className="text-sm text-red-700">{deleteError}</p>
           </div>
         )}
 

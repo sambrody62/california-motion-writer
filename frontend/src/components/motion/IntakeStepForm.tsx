@@ -48,9 +48,9 @@ export const IntakeStepForm: React.FC<IntakeStepFormProps> = ({
         {question.help_text && (
           <p className="mt-1 text-sm text-gray-500">{question.help_text}</p>
         )}
-        {errors[question.id] && (
+        {errors[question.id] ? (
           <p className="mt-1 text-sm text-red-600">This field is required</p>
-        )}
+        ) : null}
       </div>
     ))}
 

@@ -1,23 +1,22 @@
-// Local authentication service for development
-// This connects to the backend API for authentication
+// Authentication against the backend JWT API (/auth endpoints)
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api/v1';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   full_name?: string;
   created_at: string;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   success: boolean;
   user?: User;
   token?: string;
   error?: string;
 }
 
-export class LocalAuthService {
+export class AuthService {
   private currentUser: User | null = null;
   private token: string | null = null;
   private listeners: Array<(user: User | null) => void> = [];
@@ -226,43 +225,6 @@ export class LocalAuthService {
     }
   }
 
-  // Create a mock Firebase User object for compatibility
-  createMockFirebaseUser(): any {
-    if (!this.currentUser) return null;
-
-    return {
-      uid: this.currentUser.id,
-      email: this.currentUser.email,
-      displayName: this.currentUser.full_name || this.currentUser.email,
-      photoURL: null,
-      emailVerified: true,
-      isAnonymous: false,
-      metadata: {
-        creationTime: this.currentUser.created_at,
-        lastSignInTime: new Date().toISOString()
-      },
-      providerData: [],
-      refreshToken: '',
-      tenantId: null,
-      delete: async () => {},
-      getIdToken: async () => this.token || '',
-      getIdTokenResult: async () => ({
-        token: this.token || '',
-        authTime: new Date().toISOString(),
-        issuedAtTime: new Date().toISOString(),
-        expirationTime: new Date(Date.now() + 3600000).toISOString(),
-        signInProvider: 'password',
-        claims: {},
-        signInSecondFactor: null
-      }),
-      reload: async () => {},
-      toJSON: () => ({
-        uid: this.currentUser?.id,
-        email: this.currentUser?.email,
-        displayName: this.currentUser?.full_name
-      })
-    };
-  }
 }
 
-export const localAuthService = new LocalAuthService();
+export const authService = new AuthService();

@@ -7,17 +7,17 @@ import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { Dashboard } from '../Dashboard';
 
-// Mock the Firebase Auth context
-const mockFirebaseAuth = {
+// Mock the auth context
+const mockAuth = {
   user: {
-    email: 'test@example.com',
-    uid: 'test-uid'
+    id: 'test-uid',
+    email: 'test@example.com'
   },
   logout: jest.fn()
 };
 
-jest.mock('../../contexts/FirebaseAuthContext', () => ({
-  useFirebaseAuth: () => mockFirebaseAuth
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => mockAuth
 }));
 
 // Mock the API services
@@ -261,7 +261,7 @@ describe('Dashboard', () => {
       fireEvent.click(signOutButton);
     });
 
-    expect(mockFirebaseAuth.logout).toHaveBeenCalled();
+    expect(mockAuth.logout).toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 

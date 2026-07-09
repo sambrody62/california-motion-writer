@@ -4,15 +4,14 @@ import App from './App';
 import { EmergencyHelp } from './components/emergency/EmergencyHelp';
 import { BrowserRouter } from 'react-router-dom';
 
-// Mock the FirebaseAuthContext to avoid Firebase initialization issues in tests
-jest.mock('./contexts/FirebaseAuthContext', () => ({
-  FirebaseAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useFirebaseAuth: () => ({
+// Mock the AuthContext so tests don't hit the backend auth service
+jest.mock('./contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAuth: () => ({
     user: null,
     loading: false,
-    signIn: jest.fn(),
-    signUp: jest.fn(),
-    signOut: jest.fn(),
+    login: jest.fn(),
+    register: jest.fn(),
     logout: jest.fn(),
   })
 }));

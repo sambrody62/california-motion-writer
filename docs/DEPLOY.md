@@ -32,6 +32,7 @@ after that takes ~50s. Fine for beta; $7/mo removes it later.
 2. **Root Directory: `frontend`** (it will detect Create React App).
 3. Environment variables: copy everything from `frontend/.env.production`,
    updating `REACT_APP_API_URL` to your real Render URL + `/api/v1`.
+   Auth is backend JWT (`/api/v1/auth`); no Firebase configuration is needed.
 4. Deploy. Note your Vercel domain (e.g. `https://<project>.vercel.app`).
 
 ## 4. Connect the two

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { UserPlusIcon } from '@heroicons/react/20/solid';
 
 interface RegisterFormData {
@@ -12,7 +12,7 @@ interface RegisterFormData {
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register: registerUser } = useFirebaseAuth();
+  const { register: registerUser } = useAuth();
   const [error, setError] = useState('');
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>();
 

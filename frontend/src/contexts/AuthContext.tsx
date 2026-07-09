@@ -1,21 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { auth } from '../services/api';
-
-interface User {
-  id: string;
-  email: string;
-  created_at: string;
-}
+import { authService, User, AuthResponse } from '../services/auth/auth.service';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  register: (email: string, password: string) => Promise<AuthResponse>;
+  logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -34,39 +28,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      auth.getProfile()
-        .then(response => {
-          setUser(response.data);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
+    // Calls back synchronously with the localStorage-restored user, so hard
+    // redirects (e.g. the Gmail OAuth callback) don't bounce through /login
+    const unsubscribe = authService.onAuthStateChanged((user) => {
+      setUser(user);
       setLoading(false);
-    }
+    });
+
+    return unsubscribe;
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await auth.login(email, password);
-    const { access_token, user } = response.data;
-    localStorage.setItem('token', access_token);
-    setUser(user);
+    const result = await authService.login(email, password);
+    if (result.success) {
+      setUser(result.user ?? null);
+    }
+    return result;
   };
 
   const register = async (email: string, password: string) => {
-    const response = await auth.register({ email, password, full_name: '' });
-    const { access_token, user } = response.data;
-    localStorage.setItem('token', access_token);
-    setUser(user);
+    const result = await authService.register(email, password);
+    if (result.success) {
+      setUser(result.user ?? null);
+    }
+    return result;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
   };
 

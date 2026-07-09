@@ -1,6 +1,6 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { FirebaseAuthProvider } from './contexts/FirebaseAuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { Login } from './components/auth/Login';
 import { Register } from './components/auth/Register';
 import { Dashboard } from './components/Dashboard';
@@ -23,7 +23,7 @@ import { Terms } from './components/legal/Terms';
 
 function App() {
   return (
-    <FirebaseAuthProvider>
+    <AuthProvider>
       <Router>
         <Routes>
           {/* Public routes */}
@@ -180,7 +180,7 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
-    </FirebaseAuthProvider>
+    </AuthProvider>
   );
 }
 

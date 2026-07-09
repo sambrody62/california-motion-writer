@@ -1,13 +1,13 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
 }
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, loading } = useFirebaseAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (

@@ -210,7 +210,7 @@ export const CaseIntake: React.FC = () => {
                     id="existingGameplan"
                     rows={6}
                     className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    placeholder="Paste your existing legal strategy or gameplan here. Include what forms you think you need, what you want to achieve, timeline, etc."
+                    placeholder="Paste your existing action plan or gameplan here. Include what forms you think you need, what you want to achieve, timeline, etc."
                   />
                 </div>
                 {errors.existingGameplan && (
@@ -262,7 +262,7 @@ export const CaseIntake: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    {hasExistingGameplan ? 'Review Gameplan' : 'Create Legal Strategy'}
+                    {hasExistingGameplan ? 'Review Gameplan' : 'Create Action Plan'}
                     <ArrowRightIcon className="ml-2 h-5 w-5" />
                   </>
                 )}
@@ -274,7 +274,7 @@ export const CaseIntake: React.FC = () => {
         {/* Additional Help */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            This information helps us create a personalized legal strategy for your California family law case.
+            This information helps us create a personalized action plan for your California family law case.
           </p>
           <p className="text-sm text-gray-500 mt-1">
             All information is confidential and secure.

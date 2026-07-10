@@ -262,3 +262,14 @@ WCAG-AA computed; Public Sans 17px/1.5; Quick Exit hardening spec incl.
 location.replace(); 3-tier UPL disclaimer; manifest/favicon branding fixes).
 No frontend code changed — implementation order is in the spec. Found during
 verification: index.html title/description already fixed; manifest + favicons still stock CRA.
+
+### Trust re-theme, spec steps 1-3 (DONE 2026-07-10)
+Branch feat/trust-theme, 4 commits (docs, feat(theme), refactor(theme), chore(branding)).
+Tokens: civic-blue primary scale (#1d70b8 anchor) + success tokens in tailwind.config.js;
+Public Sans 400/600/700 via @fontsource; 17px/1.6 base. Migration: 267 indigo + all
+ad-hoc blue/purple classes → primary/success across 34 files; step circles unified;
+'filed' badge now solid success; legal pages max-w-[65ch]. Branding: M-monogram
+favicon/logo192/logo512 (SVG→qlmanage→PNG-in-ICO), manifest + theme-color #1d70b8.
+Verified: 208 frontend tests pass, prod build clean (pre-existing lint warnings only),
+headless-Chrome visual QA of login page. Note: types/forms.ts color field is dead data
+(nothing consumes it). Remaining spec steps: 4 (Quick Exit hardening), 5 (microcopy pass).

@@ -252,3 +252,13 @@ generation (found during re-verification: violations store generated_text, no dr
 Backend 398 passed (+17 new), frontend 208 passed (+3 new, 29 suites), npm build OK.
 Live re-verification: story1 26/26, story3 15/15 (was 10 pass/4 fail).
 Gmail 422-before-404 accepted as-is (agreed scope).
+
+### Trust design research + spec (2026-07-10)
+Deep-research run (24 sources, 118 claims, 25 adversarially verified 3-vote, 24 confirmed)
+plus 3 targeted gap agents (trauma-informed/quick-exit, typography, legal-tech/UPL).
+Deliverables: docs/design/trust-design-research.md (cited findings by dimension) and
+docs/design/design-spec.md (palette anchored on civic blue #1d70b8, all pairings
+WCAG-AA computed; Public Sans 17px/1.5; Quick Exit hardening spec incl.
+location.replace(); 3-tier UPL disclaimer; manifest/favicon branding fixes).
+No frontend code changed — implementation order is in the spec. Found during
+verification: index.html title/description already fixed; manifest + favicons still stock CRA.

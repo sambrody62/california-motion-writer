@@ -69,21 +69,31 @@ async def _load_packet_inputs(motion, current_user, db):
         .order_by(MotionDraft.step_number)
     )
     drafts = drafts_result.scalars().all()
-    if not drafts:
+    if drafts:
+        llm_sections = [
+            {
+                "step_number": draft.step_number,
+                "section": draft.step_name,
+                "original_answers": draft.question_data,
+                "rewritten_text": draft.llm_output or ""
+            }
+            for draft in drafts
+        ]
+    elif motion.generated_text:
+        # Violation filings have no drafts — the declaration lives on the motion
+        llm_sections = [
+            {
+                "step_number": 1,
+                "section": "declaration",
+                "original_answers": motion.intake_data or {},
+                "rewritten_text": motion.generated_text,
+            }
+        ]
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No draft sections found for this motion"
         )
-
-    llm_sections = [
-        {
-            "step_number": draft.step_number,
-            "section": draft.step_name,
-            "original_answers": draft.question_data,
-            "rewritten_text": draft.llm_output or ""
-        }
-        for draft in drafts
-    ]
 
     # Load confirmed evidence for this motion (late import — Evidence model may not exist yet).
     evidence_dicts: list = []

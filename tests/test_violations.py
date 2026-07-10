@@ -88,6 +88,26 @@ async def test_track_determination(
     assert resp.json()["track"] == expected_track
 
 
+async def test_violation_motion_generates_pdf(client: AsyncClient, auth_headers: dict):
+    """Violation motions have no drafts — the declaration lives on generated_text."""
+    await _create_profile(client, auth_headers)
+    resp = await client.post(
+        "/api/v1/violations/process", json=_intake(), headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+
+    listing = await client.get("/api/v1/motions/", headers=auth_headers)
+    motion_id = [m for m in listing.json() if m["motion_type"] == "VIOLATION"][0]["id"]
+
+    pdf = await client.post(
+        "/api/v1/documents/generate-pdf-sync",
+        json={"motion_id": motion_id},
+        headers=auth_headers,
+    )
+    assert pdf.status_code == 200, pdf.text
+    assert pdf.content[:4] == b"%PDF"
+
+
 async def test_invalid_payload_is_4xx_not_500(client: AsyncClient, auth_headers: dict):
     resp = await client.post(
         "/api/v1/violations/process",

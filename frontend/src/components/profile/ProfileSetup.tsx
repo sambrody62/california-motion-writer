@@ -161,7 +161,7 @@ export const ProfileSetup: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -191,7 +191,7 @@ export const ProfileSetup: React.FC = () => {
                       type="radio"
                       value="true"
                       defaultChecked
-                      className="form-radio h-4 w-4 text-indigo-600"
+                      className="form-radio h-4 w-4 text-primary-600"
                     />
                     <span className="ml-2">Petitioner</span>
                   </label>
@@ -200,7 +200,7 @@ export const ProfileSetup: React.FC = () => {
                       {...register('is_petitioner')}
                       type="radio"
                       value="false"
-                      className="form-radio h-4 w-4 text-indigo-600"
+                      className="form-radio h-4 w-4 text-primary-600"
                     />
                     <span className="ml-2">Respondent</span>
                   </label>
@@ -215,7 +215,7 @@ export const ProfileSetup: React.FC = () => {
                 <select
                   {...register('county', { required: 'County is required' })}
                   id="county"
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                 >
                   <option value="">Select a county</option>
                   {CALIFORNIA_COUNTIES.map(county => (
@@ -236,7 +236,7 @@ export const ProfileSetup: React.FC = () => {
                   {...register('case_number')}
                   type="text"
                   id="case_number"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="e.g., FL-2024-001234"
                 />
               </div>
@@ -251,7 +251,7 @@ export const ProfileSetup: React.FC = () => {
                     {...register('party_name', { required: 'Your name is required' })}
                     type="text"
                     id="party_name"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                   {errors.party_name && (
                     <p className="mt-1 text-sm text-red-600">{errors.party_name.message}</p>
@@ -266,7 +266,7 @@ export const ProfileSetup: React.FC = () => {
                     {...register('other_party_name', { required: 'Other party name is required' })}
                     type="text"
                     id="other_party_name"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   />
                   {errors.other_party_name && (
                     <p className="mt-1 text-sm text-red-600">{errors.other_party_name.message}</p>
@@ -283,7 +283,7 @@ export const ProfileSetup: React.FC = () => {
                   {...register('party_address', { required: 'Address is required' })}
                   id="party_address"
                   rows={3}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 />
                 {errors.party_address && (
                   <p className="mt-1 text-sm text-red-600">{errors.party_address.message}</p>
@@ -298,7 +298,7 @@ export const ProfileSetup: React.FC = () => {
                   {...register('party_phone', { required: 'Phone number is required' })}
                   type="tel"
                   id="party_phone"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="(555) 123-4567"
                 />
                 {errors.party_phone && (
@@ -315,7 +315,7 @@ export const ProfileSetup: React.FC = () => {
                   {...register('other_party_attorney')}
                   type="text"
                   id="other_party_attorney"
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder="Attorney name and bar number"
                 />
               </div>
@@ -329,7 +329,7 @@ export const ProfileSetup: React.FC = () => {
                   <button
                     type="button"
                     onClick={addChild}
-                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                   >
                     Add Child
                   </button>
@@ -346,7 +346,7 @@ export const ProfileSetup: React.FC = () => {
                           type="text"
                           value={child.name}
                           onChange={(e) => updateChild(index, 'name', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         />
                       </div>
                       <div>
@@ -357,7 +357,7 @@ export const ProfileSetup: React.FC = () => {
                           type="date"
                           value={child.date_of_birth}
                           onChange={(e) => updateChild(index, 'date_of_birth', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         />
                       </div>
                       <div>
@@ -367,7 +367,7 @@ export const ProfileSetup: React.FC = () => {
                         <select
                           value={child.lives_with}
                           onChange={(e) => updateChild(index, 'lives_with', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         >
                           <option value="Petitioner">Petitioner</option>
                           <option value="Respondent">Respondent</option>
@@ -397,14 +397,14 @@ export const ProfileSetup: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard')}
-                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   Skip for now
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Profile'}
                 </button>

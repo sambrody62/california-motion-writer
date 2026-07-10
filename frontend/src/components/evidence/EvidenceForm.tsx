@@ -101,7 +101,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
           id="evidenceType"
           value={evidenceType}
           onChange={(e) => setEvidenceType(e.target.value as EvidenceType)}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
         >
           <option value="text">Text message</option>
           <option value="email">Email</option>
@@ -121,7 +121,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Brief description of this evidence"
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
           aria-label="Description"
         />
       </div>
@@ -138,7 +138,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
             onChange={(e) => setMessageText(e.target.value)}
             rows={4}
             placeholder="Paste or type the exact message content here"
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
             aria-label="Message text"
           />
         </div>
@@ -178,7 +178,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
               onChange={(e) => setTranscription(e.target.value)}
               rows={4}
               placeholder="Type out the exact text shown in the file"
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
               aria-label="Type what the message says"
             />
           </div>
@@ -195,7 +195,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
           type="date"
           value={sourceDate}
           onChange={(e) => setSourceDate(e.target.value)}
-          className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+          className="block rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
           aria-label="Date"
         />
       </div>
@@ -218,7 +218,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
           aria-label="Confirmed accurate"
-          className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
         />
         <span className="text-sm text-gray-700">
           <span className="font-medium">Confirmed accurate</span> — Only confirmed items are
@@ -238,7 +238,7 @@ export const EvidenceForm: React.FC<EvidenceFormProps> = ({
         <button
           type="submit"
           disabled={!submitEnabled || saving}
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Save evidence"
         >
           {saving ? 'Saving…' : 'Save evidence'}

@@ -19,7 +19,7 @@ interface QuestionFieldProps {
 }
 
 const INPUT_CLASS =
-  'mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm';
+  'mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm';
 
 export const QuestionField: React.FC<QuestionFieldProps> = ({ question, register }) => {
   switch (question.type) {
@@ -49,7 +49,7 @@ export const QuestionField: React.FC<QuestionFieldProps> = ({ question, register
       return (
         <select
           {...register(question.id, { required: question.required })}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
         >
           <option value="">Choose...</option>
           {question.options?.map(option => (
@@ -67,7 +67,7 @@ export const QuestionField: React.FC<QuestionFieldProps> = ({ question, register
                 {...register(question.id, { required: question.required })}
                 type="radio"
                 value={option}
-                className="form-radio h-4 w-4 text-indigo-600"
+                className="form-radio h-4 w-4 text-primary-600"
               />
               <span className="ml-2">{option}</span>
             </label>
@@ -83,7 +83,7 @@ export const QuestionField: React.FC<QuestionFieldProps> = ({ question, register
               <input
                 {...register(`${question.id}.${option}`)}
                 type="checkbox"
-                className="form-checkbox h-4 w-4 text-indigo-600"
+                className="form-checkbox h-4 w-4 text-primary-600"
               />
               <span className="ml-2">{option}</span>
             </label>
@@ -121,7 +121,7 @@ export const QuestionField: React.FC<QuestionFieldProps> = ({ question, register
             {...register(question.id, { required: question.required })}
             type="number"
             step="0.01"
-            className="pl-7 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            className="pl-7 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             placeholder="0.00"
           />
         </div>

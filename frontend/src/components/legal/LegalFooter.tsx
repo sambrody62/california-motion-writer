@@ -9,10 +9,10 @@ export const LegalFooter: React.FC = () => (
         advice, and using it does not create an attorney–client relationship.
       </p>
       <div className="space-x-4 text-xs">
-        <Link to="/terms" className="text-indigo-600 hover:text-indigo-500">
+        <Link to="/terms" className="text-primary-600 hover:text-primary-500">
           Terms of Service
         </Link>
-        <Link to="/privacy" className="text-indigo-600 hover:text-indigo-500">
+        <Link to="/privacy" className="text-primary-600 hover:text-primary-500">
           Privacy Policy
         </Link>
       </div>

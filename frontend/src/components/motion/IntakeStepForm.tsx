@@ -37,11 +37,11 @@ export const IntakeStepForm: React.FC<IntakeStepFormProps> = ({
         </label>
         <QuestionField question={question} register={register} />
         {uploadPrefilledFields.has(question.id) ? (
-          <p className="mt-1 text-xs text-indigo-600">
+          <p className="mt-1 text-xs text-primary-600">
             Filled from your uploaded motion — please verify
           </p>
         ) : prefilledFields.has(question.id) ? (
-          <p className="mt-1 text-xs text-indigo-600">
+          <p className="mt-1 text-xs text-primary-600">
             Filled from your profile
           </p>
         ) : null}
@@ -60,7 +60,7 @@ export const IntakeStepForm: React.FC<IntakeStepFormProps> = ({
         type="button"
         onClick={onPrevious}
         disabled={currentStep === 1}
-        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ChevronLeftIcon className="mr-2 -ml-1 h-5 w-5" />
         Previous
@@ -68,7 +68,7 @@ export const IntakeStepForm: React.FC<IntakeStepFormProps> = ({
 
       <button
         type="submit"
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
       >
         {currentStep === totalSteps ? (
           <>

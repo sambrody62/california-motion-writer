@@ -77,7 +77,7 @@ export const BulkTranscriptReview: React.FC<BulkTranscriptReviewProps> = ({
               rows={14}
               value={transcription}
               onChange={(e) => setTranscription(e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm font-mono"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm font-mono"
             />
           </div>
 
@@ -90,7 +90,7 @@ export const BulkTranscriptReview: React.FC<BulkTranscriptReviewProps> = ({
               type="date"
               value={sourceDate}
               onChange={(e) => setSourceDate(e.target.value)}
-              className="mt-1 block border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              className="mt-1 block border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             />
           </div>
 
@@ -102,7 +102,7 @@ export const BulkTranscriptReview: React.FC<BulkTranscriptReviewProps> = ({
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
               aria-label="I reviewed this transcript and it is accurate"
-              className="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
             <span className="text-sm text-gray-700">
               I reviewed this transcript and it is accurate. Only confirmed items are
@@ -122,7 +122,7 @@ export const BulkTranscriptReview: React.FC<BulkTranscriptReviewProps> = ({
               type="button"
               onClick={handleSave}
               disabled={!confirmed || !transcription.trim() || saving}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save to case'}
             </button>

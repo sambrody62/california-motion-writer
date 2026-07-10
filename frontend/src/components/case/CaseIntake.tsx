@@ -56,8 +56,8 @@ export const CaseIntake: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <ChatBubbleBottomCenterTextIcon className="h-8 w-8 text-indigo-600" />
+            <div className="bg-primary-100 p-3 rounded-full">
+              <ChatBubbleBottomCenterTextIcon className="h-8 w-8 text-primary-600" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
@@ -88,11 +88,11 @@ export const CaseIntake: React.FC = () => {
                     onClick={() => setHasExistingGameplan(false)}
                     className={`cursor-pointer rounded-lg border-2 p-4 ${
                     !hasExistingGameplan
-                      ? 'border-indigo-500 bg-indigo-50'
+                      ? 'border-primary-500 bg-primary-50'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                   }`}>
                     <div className="flex items-center">
-                      <SparklesIcon className="h-6 w-6 text-indigo-600 mr-3" />
+                      <SparklesIcon className="h-6 w-6 text-primary-600 mr-3" />
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
                           I need help creating a plan
@@ -118,11 +118,11 @@ export const CaseIntake: React.FC = () => {
                     onClick={() => setHasExistingGameplan(true)}
                     className={`cursor-pointer rounded-lg border-2 p-4 ${
                     hasExistingGameplan
-                      ? 'border-indigo-500 bg-indigo-50'
+                      ? 'border-primary-500 bg-primary-50'
                       : 'border-gray-300 bg-white hover:border-gray-400'
                   }`}>
                     <div className="flex items-center">
-                      <ClipboardDocumentIcon className="h-6 w-6 text-indigo-600 mr-3" />
+                      <ClipboardDocumentIcon className="h-6 w-6 text-primary-600 mr-3" />
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
                           I have an existing gameplan
@@ -144,11 +144,11 @@ export const CaseIntake: React.FC = () => {
               </label>
 
               {!hasExistingGameplan && (
-                <div className="mb-4 bg-blue-50 border-l-4 border-blue-400 p-4">
-                  <p className="text-sm text-blue-700 font-medium mb-2">
+                <div className="mb-4 bg-primary-50 border-l-4 border-primary-400 p-4">
+                  <p className="text-sm text-primary-700 font-medium mb-2">
                     To create the best action plan, please answer these questions:
                   </p>
-                  <ul className="text-sm text-blue-600 space-y-2 list-none">
+                  <ul className="text-sm text-primary-600 space-y-2 list-none">
                     <li>📍 <strong>Your current status:</strong> Are you married, separated, or divorced?</li>
                     <li>🎯 <strong>What you need help with:</strong> Custody change? Child/spousal support? Restraining order? Division of property?</li>
                     <li>👶 <strong>Children (if any):</strong> How many children, their ages, and who they currently live with?</li>
@@ -157,9 +157,9 @@ export const CaseIntake: React.FC = () => {
                     <li>📅 <strong>Timeline:</strong> When did you separate? Any important deadlines?</li>
                     <li>📍 <strong>Location:</strong> Which California county is your case in?</li>
                   </ul>
-                  <div className="mt-3 p-3 bg-white rounded border border-blue-200">
-                    <p className="text-xs text-blue-700 font-medium mb-1">Example response:</p>
-                    <p className="text-xs text-blue-600 italic">
+                  <div className="mt-3 p-3 bg-white rounded border border-primary-200">
+                    <p className="text-xs text-primary-700 font-medium mb-1">Example response:</p>
+                    <p className="text-xs text-primary-600 italic">
                       "I separated from my spouse 6 months ago after 10 years of marriage. We have two children (ages 8 and 12)
                       who currently live with me. My ex has them every other weekend but often cancels last minute. I want to
                       formalize a custody arrangement with me as primary custodian and get child support. My ex is self-employed
@@ -178,7 +178,7 @@ export const CaseIntake: React.FC = () => {
                   })}
                   id="caseDescription"
                   rows={hasExistingGameplan ? 4 : 10}
-                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   placeholder={hasExistingGameplan
                     ? "Briefly describe your family law situation..."
                     : "Start here: 'I am [married/separated/divorced]. I need help with [custody/support/property/restraining order]. Here's my situation...'"
@@ -209,7 +209,7 @@ export const CaseIntake: React.FC = () => {
                     })}
                     id="existingGameplan"
                     rows={6}
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     placeholder="Paste your existing action plan or gameplan here. Include what forms you think you need, what you want to achieve, timeline, etc."
                   />
                 </div>
@@ -224,16 +224,16 @@ export const CaseIntake: React.FC = () => {
 
             {/* Helpful Examples */}
             {!hasExistingGameplan && (
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+              <div className="bg-primary-50 border-l-4 border-primary-400 p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <DocumentDuplicateIcon className="h-5 w-5 text-blue-400" />
+                    <DocumentDuplicateIcon className="h-5 w-5 text-primary-400" />
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
+                    <h3 className="text-sm font-medium text-primary-800">
                       Example situations we can help with:
                     </h3>
-                    <div className="mt-2 text-sm text-blue-700">
+                    <div className="mt-2 text-sm text-primary-700">
                       <ul className="list-disc list-inside space-y-1">
                         <li>Requesting or modifying child custody and visitation schedules</li>
                         <li>Seeking child or spousal support modifications</li>
@@ -253,7 +253,7 @@ export const CaseIntake: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

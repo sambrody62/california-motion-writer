@@ -25,7 +25,7 @@ export const EvidenceItem: React.FC<EvidenceItemProps> = ({ evidence, onRemove }
               {evidence.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700"
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700"
                 >
                   {TAG_LABELS[tag as EvidenceTag] ?? tag}
                 </span>

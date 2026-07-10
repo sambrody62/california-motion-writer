@@ -81,9 +81,9 @@ export const Dashboard: React.FC = () => {
     const statusColors: { [key: string]: string } = {
       'draft': 'bg-gray-100 text-gray-800',
       'in_progress': 'bg-yellow-100 text-yellow-800',
-      'ready_for_review': 'bg-blue-100 text-blue-800',
+      'ready_for_review': 'bg-primary-100 text-primary-800',
       'complete': 'bg-green-100 text-green-800',
-      'filed': 'bg-purple-100 text-purple-800',
+      'filed': 'bg-success-600 text-white',
     };
 
     return (
@@ -110,14 +110,14 @@ export const Dashboard: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 onClick={() => navigate('/profile/setup')}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <UserIcon className="h-4 w-4 mr-2" />
                 Profile
               </button>
               <button
                 onClick={handleSignOut}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Sign Out
               </button>
@@ -150,8 +150,8 @@ export const Dashboard: React.FC = () => {
         {/* Main Hero Section */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="bg-indigo-100 p-4 rounded-full">
-              <SparklesIcon className="h-12 w-12 text-indigo-600" />
+            <div className="bg-primary-100 p-4 rounded-full">
+              <SparklesIcon className="h-12 w-12 text-primary-600" />
             </div>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -164,7 +164,7 @@ export const Dashboard: React.FC = () => {
 
           <button
             onClick={startNewCase}
-            className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <ChatBubbleBottomCenterTextIcon className="h-6 w-6 mr-3" />
             Start Your Case
@@ -187,7 +187,7 @@ export const Dashboard: React.FC = () => {
         <div className="mb-8">
           <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start space-x-3">
-              <ScaleIcon className="h-6 w-6 text-indigo-500 flex-shrink-0 mt-0.5" />
+              <ScaleIcon className="h-6 w-6 text-primary-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Enforce an existing order</h3>
                 <p className="text-sm text-gray-600 mt-1">
@@ -198,7 +198,7 @@ export const Dashboard: React.FC = () => {
             <button
               onClick={() => navigate('/violation/intake')}
               aria-label="Enforce an existing order"
-              className="inline-flex items-center px-4 py-2 border border-indigo-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex-shrink-0"
+              className="inline-flex items-center px-4 py-2 border border-primary-300 shadow-sm text-sm font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex-shrink-0"
             >
               Get started
               <ArrowRightIcon className="h-4 w-4 ml-2" />
@@ -211,8 +211,8 @@ export const Dashboard: React.FC = () => {
           <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">How It Works</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <span className="text-2xl font-bold text-blue-600">1</span>
+              <div className="bg-primary-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-primary-600">1</span>
               </div>
               <h4 className="text-lg font-medium text-gray-900 mb-2">Explain Your Case</h4>
               <p className="text-gray-600">
@@ -221,8 +221,8 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="text-center">
-              <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <span className="text-2xl font-bold text-green-600">2</span>
+              <div className="bg-primary-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-primary-600">2</span>
               </div>
               <h4 className="text-lg font-medium text-gray-900 mb-2">Get Your Action Plan</h4>
               <p className="text-gray-600">
@@ -231,8 +231,8 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="text-center">
-              <div className="bg-purple-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <span className="text-2xl font-bold text-purple-600">3</span>
+              <div className="bg-primary-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl font-bold text-primary-600">3</span>
               </div>
               <h4 className="text-lg font-medium text-gray-900 mb-2">File Your Forms</h4>
               <p className="text-gray-600">
@@ -248,7 +248,7 @@ export const Dashboard: React.FC = () => {
           
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
             </div>
           ) : motions.length > 0 ? (
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -303,7 +303,7 @@ export const Dashboard: React.FC = () => {
               <div className="mt-6">
                 <button
                   onClick={startNewCase}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   <ChatBubbleBottomCenterTextIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                   Start Your Case

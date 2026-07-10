@@ -119,7 +119,7 @@ export const MotionPreview: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export const MotionPreview: React.FC = () => {
               <button
                 onClick={generatePDF}
                 disabled={generating}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
               >
                 <ArrowDownTrayIcon className="-ml-1 mr-2 h-5 w-5" />
                 {generating ? 'Generating...' : 'Download PDF'}
@@ -184,7 +184,7 @@ export const MotionPreview: React.FC = () => {
             aria-label={`Evidence & exhibits (${evidenceCount})`}
             className="w-full flex items-center justify-between group text-left"
           >
-            <span className="text-base font-medium text-indigo-600 group-hover:text-indigo-500">
+            <span className="text-base font-medium text-primary-600 group-hover:text-primary-500">
               Evidence &amp; exhibits ({evidenceCount})
             </span>
             <span className="text-sm text-gray-400 group-hover:text-gray-600">Manage →</span>
@@ -202,7 +202,7 @@ export const MotionPreview: React.FC = () => {
                   </h3>
                   <button
                     onClick={() => editSection(draft.step_number)}
-                    className="text-sm text-indigo-600 hover:text-indigo-500"
+                    className="text-sm text-primary-600 hover:text-primary-500"
                   >
                     Edit
                   </button>
@@ -258,7 +258,7 @@ export const MotionPreview: React.FC = () => {
             <button
               onClick={generatePDF}
               disabled={generating}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
             >
               <DocumentTextIcon className="-ml-1 mr-2 h-5 w-5" />
               {generating ? 'Generating PDF...' : 'Generate Final PDF'}
@@ -267,11 +267,11 @@ export const MotionPreview: React.FC = () => {
         </div>
 
         {/* Instructions */}
-        <div className="mt-8 bg-blue-50 border-l-4 border-blue-400 p-4">
+        <div className="mt-8 bg-primary-50 border-l-4 border-primary-400 p-4">
           <div className="flex">
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">Next Steps</h3>
-              <div className="mt-2 text-sm text-blue-700">
+              <h3 className="text-sm font-medium text-primary-800">Next Steps</h3>
+              <div className="mt-2 text-sm text-primary-700">
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Review all sections carefully for accuracy</li>
                   <li>Download the PDF and review the formatted document</li>

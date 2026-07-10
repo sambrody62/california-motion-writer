@@ -49,8 +49,8 @@ export const BulkTextImport: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg p-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <ChatBubbleLeftRightIcon className="h-8 w-8 text-indigo-600" />
+            <div className="bg-primary-100 p-3 rounded-full">
+              <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary-600" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -73,7 +73,7 @@ export const BulkTextImport: React.FC = () => {
           <label
             htmlFor="bulk-screenshots"
             className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
-              uploading ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+              uploading ? 'bg-primary-400 cursor-wait' : 'bg-primary-600 hover:bg-primary-700 cursor-pointer'
             }`}
           >
             {uploading ? 'Reading your screenshots…' : 'Choose screenshots (PNG or JPG)'}
@@ -93,7 +93,7 @@ export const BulkTextImport: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/motion/${motionId}/evidence`)}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              className="text-sm font-medium text-primary-600 hover:text-primary-500"
             >
               Back to evidence
             </button>

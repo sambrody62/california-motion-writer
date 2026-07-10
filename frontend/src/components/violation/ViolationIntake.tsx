@@ -132,7 +132,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -141,7 +141,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" />
           <p className="text-gray-700 text-lg">Analyzing your answers…</p>
         </div>
       </div>
@@ -172,7 +172,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div
-              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+              className="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
             />
           </div>
@@ -208,7 +208,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
                     type="button"
                     onClick={() => currentStep > 0 && setCurrentStep((s) => s - 1)}
                     disabled={currentStep === 0}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeftIcon className="mr-2 -ml-1 h-5 w-5" />
                     Previous
@@ -218,7 +218,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
                     <button
                       type="button"
                       onClick={handleSubmitFinal}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                     >
                       Submit <CheckIcon className="ml-2 -mr-1 h-5 w-5" />
                     </button>
@@ -226,7 +226,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                     >
                       Next <ChevronRightIcon className="ml-2 -mr-1 h-5 w-5" />
                     </button>
@@ -242,7 +242,7 @@ export const ViolationIntake: React.FC<ViolationIntakeProps> = ({ onComplete }) 
             <span
               key={idx}
               className={`h-2 w-2 rounded-full ${
-                idx === currentStep ? 'bg-indigo-600' : idx < currentStep ? 'bg-indigo-400' : 'bg-gray-300'
+                idx === currentStep ? 'bg-primary-600' : idx < currentStep ? 'bg-primary-400' : 'bg-gray-300'
               }`}
             />
           ))}

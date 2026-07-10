@@ -26,7 +26,7 @@ export const GameplanSections: React.FC<{ gameplan: GameplanData }> = ({ gamepla
           return (
             <div key={formType} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center">
-                <DocumentTextIcon className="h-5 w-5 text-indigo-600 mr-3" />
+                <DocumentTextIcon className="h-5 w-5 text-primary-600 mr-3" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-900">
                     {formMeta.name} ({formMeta.id})
@@ -52,7 +52,7 @@ export const GameplanSections: React.FC<{ gameplan: GameplanData }> = ({ gamepla
         <ul className="space-y-2">
           {gameplan.keyConsiderations.map((consideration, index) => (
             <li key={index} className="flex items-start">
-              <span className="flex-shrink-0 h-2 w-2 bg-indigo-600 rounded-full mt-2 mr-3"></span>
+              <span className="flex-shrink-0 h-2 w-2 bg-primary-600 rounded-full mt-2 mr-3"></span>
               <span className="text-gray-700">{consideration}</span>
             </li>
           ))}
@@ -66,7 +66,7 @@ export const GameplanSections: React.FC<{ gameplan: GameplanData }> = ({ gamepla
       <ol className="space-y-3">
         {gameplan.nextSteps.map((step, index) => (
           <li key={index} className="flex">
-            <span className="flex-shrink-0 bg-indigo-600 text-white text-sm font-medium rounded-full h-6 w-6 flex items-center justify-center mr-3">
+            <span className="flex-shrink-0 bg-primary-600 text-white text-sm font-medium rounded-full h-6 w-6 flex items-center justify-center mr-3">
               {index + 1}
             </span>
             <span className="text-gray-700">{step}</span>

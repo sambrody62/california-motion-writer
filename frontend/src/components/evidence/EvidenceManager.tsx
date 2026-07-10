@@ -62,7 +62,7 @@ export const EvidenceManager: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -89,7 +89,7 @@ export const EvidenceManager: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/motion/${motionId}/evidence/bulk-import`)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-md hover:bg-primary-100"
               aria-label="Import text screenshots"
             >
               Import text screenshots
@@ -97,7 +97,7 @@ export const EvidenceManager: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700"
               aria-label="Add evidence"
             >
               <PlusIcon className="h-4 w-4" />

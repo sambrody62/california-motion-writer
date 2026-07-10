@@ -140,7 +140,7 @@ export const GmailCallback: React.FC = () => {
                   id={`email-${email.message_id}`}
                   checked={selected.has(email.message_id)}
                   onChange={() => toggleSelect(email.message_id)}
-                  className="mt-0.5 rounded border-gray-300 text-indigo-600"
+                  className="mt-0.5 rounded border-gray-300 text-primary-600"
                   aria-label={email.subject}
                 />
                 <div className="flex-1">
@@ -148,7 +148,7 @@ export const GmailCallback: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900">
                       {email.subject}
                       {typeof email.relevance_score === 'number' && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        <span className="ml-2 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700">
                           {Math.round(email.relevance_score * 100)}% match
                         </span>
                       )}
@@ -156,7 +156,7 @@ export const GmailCallback: React.FC = () => {
                     <p className="text-xs text-gray-500">{email.from} · {email.date}</p>
                     <p className="text-xs text-gray-600 mt-0.5">{email.snippet}</p>
                     {email.relevance_reason && (
-                      <p className="text-xs text-indigo-600 mt-0.5">{email.relevance_reason}</p>
+                      <p className="text-xs text-primary-600 mt-0.5">{email.relevance_reason}</p>
                     )}
                   </label>
                   {(tagsByMessage[email.message_id] || []).length > 0 && (
@@ -194,7 +194,7 @@ export const GmailCallback: React.FC = () => {
             type="button"
             onClick={handleImport}
             disabled={selected.size === 0 || status === 'importing'}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Import selected emails"
           >
             {status === 'importing' ? 'Importing…' : 'Import selected'}

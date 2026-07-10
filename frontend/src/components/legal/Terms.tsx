@@ -15,8 +15,8 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
  */
 export const Terms: React.FC = () => (
   <div className="min-h-screen bg-gray-50 py-10">
-    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-8">
-      <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Back to home</Link>
+    <div className="max-w-[65ch] mx-auto bg-white rounded-lg shadow-sm p-8">
+      <Link to="/" className="text-primary-600 hover:text-primary-800 text-sm">&larr; Back to home</Link>
       <h1 className="text-3xl font-bold text-gray-900 mt-4 mb-2">Terms of Service</h1>
       <p className="text-sm text-gray-500 mb-8">Last updated: June 2026 · Draft pending attorney review</p>
 
@@ -57,7 +57,7 @@ export const Terms: React.FC = () => (
       <Section title="Get help">
         <p>
           For legal advice, contact your county court's self-help center or the
-          {' '}<a className="text-indigo-600 hover:text-indigo-800" href="https://selfhelp.courts.ca.gov/" target="_blank" rel="noopener noreferrer">California Courts Self-Help Guide</a>,
+          {' '}<a className="text-primary-600 hover:text-primary-800" href="https://selfhelp.courts.ca.gov/" target="_blank" rel="noopener noreferrer">California Courts Self-Help Guide</a>,
           or seek a licensed attorney through the California State Bar lawyer referral
           service.
         </p>

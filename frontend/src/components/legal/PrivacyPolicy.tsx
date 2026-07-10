@@ -16,8 +16,8 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
  */
 export const PrivacyPolicy: React.FC = () => (
   <div className="min-h-screen bg-gray-50 py-10">
-    <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-8">
-      <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Back to home</Link>
+    <div className="max-w-[65ch] mx-auto bg-white rounded-lg shadow-sm p-8">
+      <Link to="/" className="text-primary-600 hover:text-primary-800 text-sm">&larr; Back to home</Link>
       <h1 className="text-3xl font-bold text-gray-900 mt-4 mb-2">Privacy Policy</h1>
       <p className="text-sm text-gray-500 mb-8">Last updated: June 2026 · Draft pending attorney review</p>
 
@@ -56,7 +56,7 @@ export const PrivacyPolicy: React.FC = () => (
           Imported emails are saved as unconfirmed evidence and are never included in a
           filing until you review and confirm them. You can disconnect Gmail at any time.
           Our use of information received from Google APIs adheres to the
-          {' '}<a className="text-indigo-600 hover:text-indigo-800" href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>,
+          {' '}<a className="text-primary-600 hover:text-primary-800" href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>,
           including the Limited Use requirements.
         </p>
       </Section>

@@ -33,7 +33,7 @@ export const GmailConnect: React.FC<GmailConnectProps> = ({ motionId, accessToke
         type="button"
         onClick={handleConnect}
         disabled={loading}
-        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-md hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="Connect Gmail to find evidence"
       >
         {loading ? 'Connecting…' : 'Connect Gmail to find evidence'}

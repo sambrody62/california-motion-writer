@@ -27,7 +27,7 @@ export const EnforcementTriage: React.FC<EnforcementTriageProps> = ({
         <button
           onClick={onProceedRFO}
           aria-label="Proceed with Request for Order"
-          className="w-full inline-flex items-center justify-center px-3 py-2 border border-indigo-300 text-xs font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="w-full inline-flex items-center justify-center px-3 py-2 border border-primary-300 text-xs font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
         >
           Continue with RFO
           <ArrowRightIcon className="h-3 w-3 ml-1" />

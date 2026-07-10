@@ -68,7 +68,7 @@ export const ViolationIntakeResult: React.FC<ViolationIntakeResultProps> = ({
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Filing Track</h2>
         <p className="text-gray-600 mb-4">
           Based on your answers, this matches the{' '}
-          <span className="font-medium text-indigo-700">{result.trackName}</span> track (
+          <span className="font-medium text-primary-700">{result.trackName}</span> track (
           {result.timeline}).
         </p>
         <p className="text-sm text-gray-500">
@@ -85,7 +85,7 @@ export const ViolationIntakeResult: React.FC<ViolationIntakeResultProps> = ({
               key={track.id}
               className={`rounded-lg border p-4 ${
                 track.id === result.track
-                  ? 'border-indigo-500 bg-indigo-50'
+                  ? 'border-primary-500 bg-primary-50'
                   : 'border-gray-200'
               }`}
             >
@@ -97,7 +97,7 @@ export const ViolationIntakeResult: React.FC<ViolationIntakeResultProps> = ({
                 {TRACK_DESCRIPTIONS[track.id] || track.description}
               </p>
               {track.id === result.track && (
-                <span className="mt-2 inline-flex items-center text-xs text-indigo-700 font-medium">
+                <span className="mt-2 inline-flex items-center text-xs text-primary-700 font-medium">
                   <CheckCircleIcon className="h-4 w-4 mr-1" />
                   Matches your answers
                 </span>
@@ -150,7 +150,7 @@ export const ViolationIntakeResult: React.FC<ViolationIntakeResultProps> = ({
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             <ClipboardDocumentIcon className="h-4 w-4 mr-1.5" />
             {copied ? 'Copied!' : 'Copy Declaration'}

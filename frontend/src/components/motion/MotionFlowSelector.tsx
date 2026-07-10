@@ -51,11 +51,11 @@ export const MotionFlowSelector: React.FC = () => {
           {/* Forms Option */}
           <button
             onClick={handleFormsFlow}
-            className="group relative w-full bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-blue-500"
+            className="group relative w-full bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 text-left border-2 border-transparent hover:border-primary-500"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="bg-blue-100 p-4 rounded-full mb-4 group-hover:bg-blue-200 transition-colors">
-                <DocumentTextIcon className="h-12 w-12 text-blue-600" />
+              <div className="bg-primary-100 p-4 rounded-full mb-4 group-hover:bg-primary-200 transition-colors">
+                <DocumentTextIcon className="h-12 w-12 text-primary-600" />
               </div>
 
               <h2 className="text-xl font-semibold text-gray-900 mb-3">
@@ -85,7 +85,7 @@ export const MotionFlowSelector: React.FC = () => {
                 </li>
               </ul>
 
-              <div className="mt-6 text-blue-600 font-medium group-hover:text-blue-700">
+              <div className="mt-6 text-primary-600 font-medium group-hover:text-primary-700">
                 Go to forms →
               </div>
             </div>

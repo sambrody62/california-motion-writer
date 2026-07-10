@@ -21,7 +21,7 @@ export const IntakeProgressBar: React.FC<Omit<IntakeProgressProps, 'onStepSelect
     </div>
     <div className="w-full bg-gray-200 rounded-full h-2.5">
       <div
-        className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
+        className="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
         style={{ width: `${(currentStep / totalSteps) * 100}%` }}
       ></div>
     </div>
@@ -40,9 +40,9 @@ export const IntakeStepDots: React.FC<Omit<IntakeProgressProps, 'title'>> = ({
         onClick={() => onStepSelect(index + 1)}
         className={`h-2 w-2 rounded-full ${
           index + 1 === currentStep
-            ? 'bg-indigo-600'
+            ? 'bg-primary-600'
             : index + 1 < currentStep
-            ? 'bg-indigo-400'
+            ? 'bg-primary-400'
             : 'bg-gray-300'
         }`}
       />

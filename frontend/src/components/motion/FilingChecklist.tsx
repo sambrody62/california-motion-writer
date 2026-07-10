@@ -49,7 +49,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-print"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(0)}
               onChange={() => toggleItem(0)}
             />
@@ -62,7 +62,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-sign"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(1)}
               onChange={() => toggleItem(1)}
             />
@@ -75,7 +75,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-fee"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(2)}
               onChange={() => toggleItem(2)}
             />
@@ -88,7 +88,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-address"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(3)}
               onChange={() => toggleItem(3)}
             />
@@ -101,7 +101,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-serve"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(4)}
               onChange={() => toggleItem(4)}
             />
@@ -114,7 +114,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
             <input
               type="checkbox"
               id="generic-proof"
-              className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
               checked={checkedItems.has(5)}
               onChange={() => toggleItem(5)}
             />
@@ -141,7 +141,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
       </div>
 
       {/* Filing Requirements */}
-      <div className="mb-6 p-4 bg-blue-50 rounded border border-blue-200">
+      <div className="mb-6 p-4 bg-primary-50 rounded border border-primary-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Filing Requirements</h3>
         <div className="space-y-2 text-sm text-gray-700">
           <p>
@@ -170,7 +170,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-print"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(0)}
             onChange={() => toggleItem(0)}
           />
@@ -183,7 +183,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-sign"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(1)}
             onChange={() => toggleItem(1)}
           />
@@ -196,7 +196,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-fee"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(2)}
             onChange={() => toggleItem(2)}
           />
@@ -209,7 +209,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-address"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(3)}
             onChange={() => toggleItem(3)}
           />
@@ -222,7 +222,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-serve"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(4)}
             onChange={() => toggleItem(4)}
           />
@@ -235,7 +235,7 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           <input
             type="checkbox"
             id="check-proof"
-            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
             checked={checkedItems.has(5)}
             onChange={() => toggleItem(5)}
           />

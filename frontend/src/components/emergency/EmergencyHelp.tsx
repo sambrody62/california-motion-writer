@@ -58,7 +58,7 @@ export const EmergencyHelp: React.FC = () => {
               href="https://selfhelp.courts.ca.gov/DV-restraining-order"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-indigo-600 hover:text-indigo-800 underline text-sm font-medium"
+              className="inline-flex items-center text-primary-600 hover:text-primary-800 underline text-sm font-medium"
             >
               <DocumentTextIcon className="h-4 w-4 mr-1" />
               California Courts Self-Help: Domestic Violence Restraining Order
@@ -68,7 +68,7 @@ export const EmergencyHelp: React.FC = () => {
               href="https://www.courts.ca.gov/1032.htm"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-indigo-600 hover:text-indigo-800 underline text-sm font-medium"
+              className="inline-flex items-center text-primary-600 hover:text-primary-800 underline text-sm font-medium"
             >
               <DocumentTextIcon className="h-4 w-4 mr-1" />
               DV-100 and related court forms
@@ -82,7 +82,7 @@ export const EmergencyHelp: React.FC = () => {
         {/* Option 2: Emergency custody orders */}
         <ResourceCard title="Emergency (Ex Parte) Custody Order">
           <div className="flex items-start space-x-3 mb-4">
-            <DocumentTextIcon className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+            <DocumentTextIcon className="h-5 w-5 text-primary-500 flex-shrink-0 mt-0.5" />
             <p className="text-gray-700">
               If your child is in immediate danger, you can ask a judge for an emergency custody order without
               advance notice to the other parent. You must show an immediate risk of harm.
@@ -96,7 +96,7 @@ export const EmergencyHelp: React.FC = () => {
             href="https://selfhelp.courts.ca.gov/child-custody"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center text-indigo-600 hover:text-indigo-800 underline text-sm font-medium"
+            className="inline-flex items-center text-primary-600 hover:text-primary-800 underline text-sm font-medium"
           >
             <DocumentTextIcon className="h-4 w-4 mr-1" />
             California Courts Self-Help: Child Custody
@@ -111,20 +111,20 @@ export const EmergencyHelp: React.FC = () => {
               <div>
                 <p className="font-medium text-gray-900">National Domestic Violence Hotline</p>
                 <p className="text-gray-700">
-                  Call <a href="tel:18007997233" className="font-semibold text-indigo-600 hover:underline">1-800-799-7233</a>{' '}
+                  Call <a href="tel:18007997233" className="font-semibold text-primary-600 hover:underline">1-800-799-7233</a>{' '}
                   (24/7, free, confidential) or text <strong>START</strong> to <strong>88788</strong>
                 </p>
               </div>
             </li>
             <li className="flex items-start space-x-3">
-              <HomeIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <HomeIcon className="h-5 w-5 text-primary-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-gray-900">Find a local shelter</p>
                 <a
                   href="https://www.domesticshelters.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 hover:underline text-sm"
+                  className="text-primary-600 hover:underline text-sm"
                 >
                   domesticshelters.org — search by zip code
                 </a>

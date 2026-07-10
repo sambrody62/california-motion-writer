@@ -38,8 +38,8 @@ export const ServedMotionUpload: React.FC<ServedMotionUploadProps> = ({
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg p-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <DocumentArrowUpIcon className="h-8 w-8 text-indigo-600" />
+            <div className="bg-primary-100 p-3 rounded-full">
+              <DocumentArrowUpIcon className="h-8 w-8 text-primary-600" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -62,7 +62,7 @@ export const ServedMotionUpload: React.FC<ServedMotionUploadProps> = ({
           <label
             htmlFor="served-motion-file"
             className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white ${
-              parsing ? 'bg-indigo-400 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+              parsing ? 'bg-primary-400 cursor-wait' : 'bg-primary-600 hover:bg-primary-700 cursor-pointer'
             }`}
           >
             {parsing ? 'Reading your document…' : 'Upload the motion (PDF or photo)'}
@@ -81,7 +81,7 @@ export const ServedMotionUpload: React.FC<ServedMotionUploadProps> = ({
               type="button"
               onClick={onSkip}
               disabled={parsing}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+              className="text-sm font-medium text-primary-600 hover:text-primary-500 disabled:opacity-50"
             >
               Skip — I'll type it in myself
             </button>

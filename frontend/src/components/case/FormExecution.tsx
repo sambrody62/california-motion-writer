@@ -98,8 +98,8 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <ClipboardDocumentListIcon className="h-8 w-8 text-indigo-600" />
+            <div className="bg-primary-100 p-3 rounded-full">
+              <ClipboardDocumentListIcon className="h-8 w-8 text-primary-600" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
@@ -124,7 +124,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
                   key={formType}
                   className={`border rounded-lg p-4 ${
                     isCurrent
-                      ? 'border-indigo-500 bg-indigo-50'
+                      ? 'border-primary-500 bg-primary-50'
                       : isCompleted
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 bg-white'
@@ -136,7 +136,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
                         isCompleted
                           ? 'bg-green-600 text-white'
                           : isCurrent
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-primary-600 text-white'
                           : 'bg-gray-300 text-gray-600'
                       }`}>
                         {isCompleted ? (
@@ -188,11 +188,11 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
               </div>
 
               {/* Form Context from Gameplan */}
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-                <h3 className="text-sm font-medium text-blue-800 mb-2">
+              <div className="bg-primary-50 border-l-4 border-primary-400 p-4 mb-6">
+                <h3 className="text-sm font-medium text-primary-800 mb-2">
                   Why you need this form:
                 </h3>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-primary-700">
                   Based on your case analysis, this form is needed to carry out your action plan.
                   The information you provided will be used to pre-populate relevant fields.
                 </p>
@@ -202,7 +202,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
               <div className="flex justify-center">
                 <button
                   onClick={() => startForm(currentForm)}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   <DocumentTextIcon className="h-5 w-5 mr-2" />
                   Fill Out Form
@@ -216,7 +216,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
               <button
                 onClick={goToPreviousForm}
                 disabled={currentFormIndex === 0}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-2" />
                 Previous Form
@@ -231,7 +231,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
               <button
                 onClick={goToNextForm}
                 disabled={currentFormIndex === forms.length - 1}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next Form
                 <ArrowRightIcon className="h-4 w-4 ml-2" />

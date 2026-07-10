@@ -36,6 +36,10 @@ const GENERIC_FALLBACK: Omit<GameplanData, 'recommendedForms'> = {
 
 export const extractResponseText = (messageResponse: any): string => {
   if (typeof messageResponse === 'string') return messageResponse;
+  // Real POST /chat/messages shape: {response: {message: {content}}}
+  if (typeof messageResponse?.response?.message?.content === 'string') {
+    return messageResponse.response.message.content;
+  }
   if (messageResponse?.response) {
     return typeof messageResponse.response === 'string'
       ? messageResponse.response

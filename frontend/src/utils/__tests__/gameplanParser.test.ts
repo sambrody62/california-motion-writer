@@ -55,4 +55,29 @@ describe('extractResponseText', () => {
     expect(extractResponseText({ response: { response: 'hello' } })).toBe('hello');
     expect(extractResponseText({ data: 'hello' })).toBe('hello');
   });
+
+  it('reads message content from the real POST /chat/messages envelope', () => {
+    // Shape recorded live in tasks/user-story-test-results.md (F3)
+    const envelope = {
+      success: true,
+      message_id: '4aeb6129-2599-41d7-91e8-163d9681acaf',
+      response: {
+        success: true,
+        message: {
+          id: '4aeb6129-2599-41d7-91e8-163d9681acaf',
+          content: RICH_RESPONSE,
+          sender: 'assistant',
+          quick_replies: [],
+        },
+      },
+    };
+
+    expect(extractResponseText(envelope)).toBe(RICH_RESPONSE);
+
+    // The parser must see the content, not JSON envelope noise
+    const { data, isFallback } = parseLLMResponse(extractResponseText(envelope));
+    expect(isFallback).toBe(false);
+    expect(data.recommendedForms).toContain('FL-300');
+    expect(data.analysis).not.toMatch(/message_id|"success"/);
+  });
 });

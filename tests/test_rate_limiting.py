@@ -34,6 +34,27 @@ async def test_llm_process_motion_throttled_after_limit(
     assert statuses[5] == 429
 
 
+async def test_429_carries_retry_after_header(
+    client: AsyncClient, auth_headers: dict, rate_limits_on
+):
+    # exhaust the 5/hour process-motion limit, then inspect the 429
+    for _ in range(5):
+        await client.post(
+            "/api/v1/llm/process-motion",
+            json={"motion_id": "00000000-0000-0000-0000-000000000000"},
+            headers=auth_headers,
+        )
+    resp = await client.post(
+        "/api/v1/llm/process-motion",
+        json={"motion_id": "00000000-0000-0000-0000-000000000000"},
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 429
+    retry_after = int(resp.headers["retry-after"])
+    assert 0 < retry_after <= 3600
+
+
 async def test_auth_token_throttled_after_limit(client: AsyncClient, rate_limits_on):
     # /api/v1/auth/token is limited to 20/hour
     for _ in range(20):

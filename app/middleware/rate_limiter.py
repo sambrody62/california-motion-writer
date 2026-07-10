@@ -71,8 +71,8 @@ class RateLimiterMiddleware(UsageQuotaMixin):
         # Fall back to IP address
         return f"ip:{get_remote_address(request)}"
 
-    async def check_rate_limit(self, request: Request, endpoint: str) -> bool:
-        """Check if request is within rate limits"""
+    async def check_rate_limit(self, request: Request, endpoint: str) -> tuple:
+        """(allowed, retry_after_seconds) — retry_after is 0 when allowed"""
         user_key = self._get_user_id(request)
 
         limit, period = self._parse_rate_limit(RATE_LIMITS[endpoint])
@@ -105,7 +105,7 @@ class RateLimiterMiddleware(UsageQuotaMixin):
         endpoint: str,
         limit: int,
         period: int
-    ) -> bool:
+    ) -> tuple:
         """Check rate limit using Redis"""
         key = f"rate_limit:{user_key}:{endpoint}"
 
@@ -121,17 +121,20 @@ class RateLimiterMiddleware(UsageQuotaMixin):
             count = await self.redis_client.zcard(key)
 
             if count >= limit:
-                return False
+                # Oldest request's slot frees up first
+                oldest = await self.redis_client.zrange(key, 0, 0, withscores=True)
+                retry_after = int(oldest[0][1] + period - now) + 1 if oldest else period
+                return False, max(retry_after, 1)
 
             # Add current request
             await self.redis_client.zadd(key, {str(now): now})
             await self.redis_client.expire(key, period)
 
-            return True
+            return True, 0
 
         except Exception as e:
             logger.error(f"Redis rate limit check failed: {e}")
-            return True  # Allow on error
+            return True, 0  # Allow on error
 
     def _check_memory_rate_limit(
         self,
@@ -139,7 +142,7 @@ class RateLimiterMiddleware(UsageQuotaMixin):
         endpoint: str,
         limit: int,
         period: int
-    ) -> bool:
+    ) -> tuple:
         """Check rate limit using in-memory store"""
         now = datetime.utcnow()
         window_start = now - timedelta(seconds=period)
@@ -155,11 +158,14 @@ class RateLimiterMiddleware(UsageQuotaMixin):
 
         # Check limit
         if len(user_data["requests"]) >= limit:
-            return False
+            # Oldest request's slot frees up first
+            oldest = user_data["requests"][0]
+            retry_after = int((oldest + timedelta(seconds=period) - now).total_seconds()) + 1
+            return False, max(retry_after, 1)
 
         # Add current request
         user_data["requests"].append(now)
-        return True
+        return True, 0
 
 
 # Create middleware instance
@@ -172,13 +178,15 @@ async def rate_limit_middleware(request: Request, call_next):
     if not enabled or request.url.path not in RATE_LIMITS:
         return await call_next(request)
 
-    if not await rate_limiter.check_rate_limit(request, request.url.path):
+    allowed, retry_after = await rate_limiter.check_rate_limit(request, request.url.path)
+    if not allowed:
         return JSONResponse(
             status_code=429,
             content={
                 "error": "Rate limit exceeded",
                 "message": "Too many requests. Please try again later."
-            }
+            },
+            headers={"Retry-After": str(retry_after)}
         )
 
     return await call_next(request)

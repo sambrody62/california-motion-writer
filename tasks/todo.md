@@ -214,3 +214,41 @@ All 13 remediation items implemented TDD-first on `fix/known-issues` (13 commits
 - 300-line rule: GuidedIntake 296, GameplanCreation 284, MotionPreview 289, rate_limiter 184 (extractions: useMotionInit, useIntakePrefill, IntakeStepForm, IntakeProgress, IntakeNotices, IntakeErrorBanner, gameplanParser, GameplanSections, EnforcementTriage, MotionPreviewBanners, rate_limit_config, usage_quotas).
 - Deferred (known follow-ups): delete dead backend services/main_local.py (its /ws is unreachable), Firebase root artifacts (firebase.json etc.), cost counters to DB, docs rewrite (CLAUDE.md/README still describe GCP).
 - Pre-existing, untouched: 4 tsc --noEmit errors in old test files; exhaustive-deps lint warnings.
+
+## User-Story Feature Test Pass (2026-07-09/10)
+
+Full report: tasks/user-story-test-results.md. Six personas driven end-to-end
+against the live local stack (mock LLM, rate limits ON, fresh story-test.db).
+Baselines green before AND after (backend 381 passed/3 xfailed; frontend 205 passed).
+
+Works verified end-to-end: RFO signup→PDF (7-page packet, data verified in PDF text);
+intake resume/edit; FL-320 served-motion gate + 9-court-day deadline (real courtDays.ts);
+gameplan honest fallback; evidence CRUD/batch/upload; all Story-6 security checks
+(401s, cross-user isolation, rate limits 429, zero PII in logs).
+
+Bugs found (reported, NOT fixed):
+- [x] F1 CRITICAL: /violations/process 500s for every user — lazy `current_user.profile`
+      in async context (violations.py:69, MissingGreenlet); whole violation flow dead.
+- [x] F2 MEDIUM: intake.py:36 evaluates `.includes(` before `||` — support step skipped /
+      best-interests never asked via /intake/rfo/*. NOTE: frontend doesn't use this API
+      (client templates + drafts); candidate for the dead-code cleanup instead.
+- [x] F3 MEDIUM: extractResponseText (gameplanParser.ts) reads response.response but chat
+      returns response.message.content → real-LLM gameplan would render raw JSON.
+      Fix BEFORE real-LLM testing (launch blocker #2 unlock).
+- [x] F4 LOW: _save_to_disk OSError not wrapped in EvidenceStorageError → raw 500, not
+      the friendly 502 (prod supabase path is correct).
+- [x] F5 LOW: POST /motions/ response omits case_number (GETs have it).
+- [x] F6 LOW (UPL/compliance): CaseIntake.tsx lines 213/265/277 still say "legal strategy"
+      — R8 leftover; Dashboard/GameplanCreation/FormExecution already say "action plan".
+- Info: gmail-flagged routes 422 before 404 on malformed bodies; 429s lack Retry-After;
+  app <title> still "React App".
+
+### Fix pass review (2026-07-10)
+All 6 findings + 2 nits fixed TDD-first on fix/known-issues (9 commits):
+violations MissingGreenlet + None-city courthouse, gameplan extractResponseText,
+intake || ordering, disk EvidenceStorageError wrap, create-response case_number,
+CaseIntake UPL copy, app title, Retry-After on 429s, and violation-motion PDF
+generation (found during re-verification: violations store generated_text, no drafts).
+Backend 398 passed (+17 new), frontend 208 passed (+3 new, 29 suites), npm build OK.
+Live re-verification: story1 26/26, story3 15/15 (was 10 pass/4 fail).
+Gmail 422-before-404 accepted as-is (agreed scope).

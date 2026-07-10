@@ -69,10 +69,13 @@ def save_file(motion_id: str, filename: str, content: bytes) -> str:
 
 
 def _save_to_disk(motion_id: str, filename: str, content: bytes) -> str:
-    dest_dir = _UPLOADS_ROOT / motion_id
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_dir / filename
-    dest_path.write_bytes(content)
+    try:
+        dest_dir = _UPLOADS_ROOT / motion_id
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / filename
+        dest_path.write_bytes(content)
+    except OSError as exc:
+        raise EvidenceStorageError(f"Local disk write failed: {exc}") from exc
     return str(dest_path)
 
 

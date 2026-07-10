@@ -74,3 +74,43 @@ async def test_upload_returns_502_and_no_orphan_row(
     )
     assert listing.status_code == 200
     assert listing.json() == []
+
+
+@pytest.fixture
+def unwritable_local_backend(monkeypatch, tmp_path):
+    """local backend whose uploads root sits inside a read-only directory."""
+    monkeypatch.setenv("STORAGE_BACKEND", "local")
+    readonly = tmp_path / "readonly"
+    readonly.mkdir()
+    readonly.chmod(0o555)
+    monkeypatch.setattr(
+        evidence_storage_service, "_UPLOADS_ROOT", readonly / "uploads"
+    )
+    yield
+    readonly.chmod(0o755)
+
+
+def test_save_file_raises_on_disk_error(unwritable_local_backend):
+    with pytest.raises(EvidenceStorageError):
+        evidence_storage_service.save_file("motion-x", "note.txt", b"hello")
+
+
+async def test_upload_returns_502_on_disk_error(
+    client: AsyncClient, auth_headers: dict, unwritable_local_backend
+):
+    motion_id = await _create_motion(client, auth_headers)
+    resp = await client.post(
+        f"/api/v1/motions/{motion_id}/evidence/upload",
+        data={"evidence_type": "text", "tags": '["threat"]', "description": "note"},
+        files={"file": ("note.txt", io.BytesIO(b"hello"), "text/plain")},
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 502
+    assert "nothing was saved" in resp.json()["detail"].lower()
+
+    listing = await client.get(
+        f"/api/v1/motions/{motion_id}/evidence", headers=auth_headers
+    )
+    assert listing.status_code == 200
+    assert listing.json() == []

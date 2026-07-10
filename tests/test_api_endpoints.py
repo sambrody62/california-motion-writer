@@ -213,6 +213,28 @@ class TestMotionEndpoints:
         assert data["motion_type"] == "RFO"
         assert data["title"] == "Request for Order - Custody"
         assert data["status"] == "draft"
+        assert data["case_number"] is None  # no profile yet
+
+    @pytest.mark.asyncio
+    async def test_create_motion_includes_profile_case_number(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """The create response carries the profile case_number like the GETs do."""
+        resp = await client.post(
+            "/api/v1/profiles/",
+            json={"case_number": "24FL001234C", "county": "San Diego"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+
+        response = await client.post(
+            "/api/v1/motions",
+            json={"motion_type": "RFO", "title": "With case number"},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 201
+        assert response.json()["case_number"] == "24FL001234C"
 
     @pytest.mark.asyncio
     async def test_list_motions(self, client: AsyncClient, auth_headers: dict):

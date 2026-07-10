@@ -111,7 +111,7 @@ async def create_motion(
     db.add(motion)
     await db.commit()
     await db.refresh(motion)
-    return _motion_to_response(motion)
+    return _motion_to_response(motion, await _user_case_number(current_user, db))
 
 
 @router.get("/", response_model=List[MotionResponse])

@@ -3,13 +3,14 @@ API endpoints for San Diego violation filings
 """
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
 from app.services.violation_service import ViolationFilingService
 from app.api.v1.endpoints.auth import get_current_user
-from app.models.user import User
+from app.models.user import User, Profile
 from app.models.motion import Motion, MotionType
 import logging
 
@@ -64,13 +65,19 @@ async def process_violation_filing(
     - Filing instructions
     """
     try:
-        # Get user profile for courthouse determination
+        # Get user profile for courthouse determination.
+        # Explicit query — lazy-loading current_user.profile raises
+        # MissingGreenlet under the async session.
+        result = await db.execute(
+            select(Profile).where(Profile.user_id == current_user.id)
+        )
+        profile = result.scalar_one_or_none()
         profile_data = None
-        if current_user.profile:
+        if profile:
             profile_data = {
-                "city": current_user.profile.city,
-                "zipCode": current_user.profile.zip_code,
-                "county": current_user.profile.county
+                "city": profile.city,
+                "zipCode": profile.zip_code,
+                "county": profile.county
             }
 
         # Process the violation filing
@@ -105,11 +112,13 @@ async def process_violation_filing(
 
         return ViolationFilingResponse(**result)
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing violation filing: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="Failed to process violation filing"
         )
 
 @router.get("/tracks")

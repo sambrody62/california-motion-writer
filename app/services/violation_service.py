@@ -287,9 +287,10 @@ class ViolationFilingService:
         if not profile_data:
             return default
 
-        # Logic to determine courthouse based on zip code or city
-        city = profile_data.get("city", "").lower()
-        zip_code = profile_data.get("zipCode", "")
+        # Logic to determine courthouse based on zip code or city.
+        # Fields are usually present-but-None (the profiles API doesn't collect them).
+        city = (profile_data.get("city") or "").lower()
+        zip_code = profile_data.get("zipCode") or ""
 
         # Simple mapping - can be enhanced
         if "el cajon" in city or zip_code.startswith("920"):

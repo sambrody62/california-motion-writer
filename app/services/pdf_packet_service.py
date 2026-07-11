@@ -26,7 +26,7 @@ _MC030_PATH = _FORMS_ROOT / "san-diego-violation" / "mc030.pdf"
 _FL150_PATH = _FORMS_ROOT / "FL-150.pdf"
 
 # Motion types that use FL-300 as the primary form.
-_FL300_TYPES = {"rfo", "violation"}
+_FL300_TYPES = {"rfo", "violation", "fl-300"}
 
 
 @runtime_checkable
@@ -52,8 +52,13 @@ class _ProfileLike(Protocol):
     children_info: Any
 
 
-def _primary_form(motion_type) -> str:
-    """Return the primary form name for a motion type (str or enum)."""
+def primary_form_for(motion_type) -> str:
+    """Return the primary form name for a motion type (str or enum).
+
+    Single source of truth — API endpoints must use this instead of keeping
+    their own type sets (regression L6: documents.py's copy and this one
+    disagreed on 'fl-300', so guided FL-300 packets led with FL-320).
+    """
     raw = motion_type.value if hasattr(motion_type, "value") else str(motion_type)
     return "FL-300" if raw.lower() in _FL300_TYPES else "FL-320"
 
@@ -192,7 +197,7 @@ async def generate_packet(
     lettered = assign_exhibit_letters(eligible) if eligible else []
 
     # 1. Primary form
-    primary_form = _primary_form(motion.motion_type)
+    primary_form = primary_form_for(motion.motion_type)
     primary_bytes = await _pdf_svc.fill_form(primary_form, {
         "petitioner_name": profile.party_name,
         "respondent_name": profile.other_party_name,

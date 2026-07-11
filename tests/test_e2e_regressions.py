@@ -3,8 +3,10 @@ Regression tests for bugs found in the 2026-07-06 live E2E run
 (tasks/e2e-test-findings.md).
 """
 import importlib
+import io
 import os
 import pytest
+import PyPDF2
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
@@ -69,8 +71,10 @@ class TestMotionTypeCaseInsensitive:
         assert resp.json()["motion_type"] == "RFO"
 
 
-async def _create_rfo_with_draft(client: AsyncClient, auth_headers: dict) -> str:
-    """Profile + RFO motion + one draft; returns motion_id."""
+async def _create_rfo_with_draft(
+    client: AsyncClient, auth_headers: dict, motion_type: str = "RFO"
+) -> str:
+    """Profile + motion + one draft; returns motion_id."""
     await client.post(
         "/api/v1/profiles",
         json={
@@ -84,7 +88,7 @@ async def _create_rfo_with_draft(client: AsyncClient, auth_headers: dict) -> str
     )
     motion_resp = await client.post(
         "/api/v1/motions",
-        json={"motion_type": "RFO", "title": "E2E regression RFO"},
+        json={"motion_type": motion_type, "title": "E2E regression RFO"},
         headers=auth_headers,
     )
     assert motion_resp.status_code == 201, motion_resp.text
@@ -185,6 +189,52 @@ class TestDownloadConsistency:
         # RFO must auto-detect to FL-300 (the request form), never FL-320
         assert all(d["document_type"] == "FL-300" for d in docs)
         assert all("MotionType." not in d["filename"] for d in docs)
+
+
+class TestFL300PrimaryForm:
+    """Regression L6: guided FL-300 motions rendered FL-320 'Responsive
+    Declaration' as pages 1-2. The old suite missed it three ways: the async
+    test asserted only the document_type column, fixtures only used uppercase
+    'RFO', and the download test mocked generate_packet."""
+
+    # Present only in the FL-320 blank among the packet's forms (proven
+    # distinctive in test_pdf_primary_form.py::test_fl320_marker_is_distinctive).
+    FL320_MARKER = "CONSENT TO THE ORDER REQUESTED"
+
+    @staticmethod
+    def _pdf_text(pdf_bytes: bytes) -> str:
+        reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+        return "".join(page.extract_text() or "" for page in reader.pages)
+
+    @pytest.mark.asyncio
+    async def test_lowercase_fl300_sync_and_download_render_fl300(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Both PDF paths, unmocked, for the motion_type the guided flow stores."""
+        motion_id = await _create_rfo_with_draft(
+            client, auth_headers, motion_type="fl-300"
+        )
+
+        sync_resp = await client.post(
+            "/api/v1/documents/generate-pdf-sync",
+            json={"motion_id": motion_id},
+            headers=auth_headers,
+        )
+        assert sync_resp.status_code == 200, sync_resp.text
+        assert sync_resp.content[:4] == b"%PDF"
+        assert self.FL320_MARKER not in self._pdf_text(sync_resp.content).upper()
+
+        list_resp = await client.get(
+            f"/api/v1/documents/motion/{motion_id}/documents", headers=auth_headers
+        )
+        doc_id = list_resp.json()["documents"][0]["id"]
+
+        dl_resp = await client.get(
+            f"/api/v1/documents/{doc_id}/download", headers=auth_headers
+        )
+        assert dl_resp.status_code == 200, dl_resp.text
+        assert dl_resp.content[:4] == b"%PDF"
+        assert self.FL320_MARKER not in self._pdf_text(dl_resp.content).upper()
 
 
 class TestLLMServiceRobustness:

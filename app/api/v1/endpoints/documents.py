@@ -29,7 +29,7 @@ from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
 from app.core.config import settings
-from app.services.pdf_packet_service import generate_packet
+from app.services.pdf_packet_service import generate_packet, primary_form_for
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -38,14 +38,6 @@ logger = logging.getLogger(__name__)
 def _motion_type_value(motion_type) -> str:
     """Enum-or-string motion_type → its string value (never 'MotionType.RFO')."""
     return motion_type.value if hasattr(motion_type, "value") else str(motion_type)
-
-
-def _primary_form_for(motion) -> str:
-    return (
-        "FL-300"
-        if _motion_type_value(motion.motion_type).lower() in {"rfo", "violation", "fl-300"}
-        else "FL-320"
-    )
 
 
 async def _load_packet_inputs(motion, current_user, db):
@@ -156,7 +148,7 @@ async def generate_pdf(
             )
         
         # Auto-detect document type if not provided
-        document_type = request.document_type or _primary_form_for(motion)
+        document_type = request.document_type or primary_form_for(motion.motion_type)
 
         # Case number lives on the profile, not the motion
         profile_result = await db.execute(
@@ -269,7 +261,7 @@ async def generate_pdf_sync(
         # Create document record
         document = Document(
             motion_id=motion.id,
-            document_type=_primary_form_for(motion),
+            document_type=primary_form_for(motion.motion_type),
             filename=f"{profile.case_number or 'DRAFT'}_{_motion_type_value(motion.motion_type)}_{datetime.now().strftime('%Y%m%d')}.pdf",
             file_size_bytes=len(pdf_bytes),
             generation_method="automated",

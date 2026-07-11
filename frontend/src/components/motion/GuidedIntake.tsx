@@ -99,22 +99,20 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       setLoading(true);
       setLoadError(null);
       const response = await intakeAPI.getQuestions(currentFormType!, stepNumber);
-      setStepData(response.data);
-
-      if (response.data.total_steps) {
-        setTotalSteps(response.data.total_steps);
-      }
 
       if (motionId) {
         const drafts = await motionAPI.getDrafts(motionId);
         const savedDraft = (drafts || []).find(
           (d) => d.step_number === stepNumber
         );
-        if (savedDraft) {
-          reset(savedDraft.question_data);
-        } else {
-          reset({});
-        }
+        // Reset BEFORE publishing stepData — the prefill effects key on
+        // stepData, so setValue always follows reset instead of racing it (L9/L12)
+        reset(savedDraft ? savedDraft.question_data : {});
+      }
+
+      setStepData(response.data);
+      if (response.data.total_steps) {
+        setTotalSteps(response.data.total_steps);
       }
     } catch (error) {
       console.error('Failed to load step:', error);

@@ -89,9 +89,8 @@ export const useIntakePrefill = ({ stepData, getValues, setValue }: UseIntakePre
       }
     });
 
-    if (newPrefilled.size > 0) {
-      setPrefilledFields(newPrefilled);
-    }
+    // Unconditional — stale badges from a previous step must always clear
+    setPrefilledFields(newPrefilled);
   };
 
   const applyUploadPrefill = () => {

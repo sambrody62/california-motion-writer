@@ -23,7 +23,7 @@ export const PrivacyPolicy: React.FC = () => (
 
       <Section title="What this service is">
         <p>
-          California Motion Writer helps self-represented litigants prepare California
+          Family Court Helper helps self-represented litigants prepare California
           family court documents. It provides document preparation and legal information
           only — not legal advice, and it is not a law firm.
         </p>

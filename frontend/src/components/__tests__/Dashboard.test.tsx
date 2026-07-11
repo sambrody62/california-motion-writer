@@ -70,7 +70,7 @@ describe('Dashboard', () => {
     renderWithRouter(<Dashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('California Motion Writer')).toBeInTheDocument();
+      expect(screen.getByText('Family Court Helper')).toBeInTheDocument();
       expect(screen.getByText('Welcome back, test@example.com')).toBeInTheDocument();
     });
   });
@@ -313,7 +313,7 @@ describe('Dashboard', () => {
 
     await waitFor(() => {
       // Should still render the page even with API errors
-      expect(screen.getByText('California Motion Writer')).toBeInTheDocument();
+      expect(screen.getByText('Family Court Helper')).toBeInTheDocument();
     });
 
     consoleSpy.mockRestore();

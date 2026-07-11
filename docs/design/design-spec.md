@@ -1,4 +1,4 @@
-# Trust Design Spec — California Motion Writer
+# Trust Design Spec — Family Court Helper
 
 **Status:** Approved research → spec. No code changes yet; implementation is a follow-up task.
 **Evidence base:** [trust-design-research.md](trust-design-research.md). All contrast ratios below were computed (WCAG relative-luminance formula), not eyeballed.
@@ -98,13 +98,13 @@ Keep the existing ring pattern, retargeted: `focus:ring-2 focus:ring-offset-2 fo
 
 ## UPL disclaimer (three tiers — industry-consistent)
 
-- **Tier 1, footer every page:** "California Motion Writer is not a law firm and does not provide legal advice. We provide self-help document preparation tools. Using this site does not create an attorney-client relationship."
+- **Tier 1, footer every page:** "Family Court Helper is not a law firm and does not provide legal advice. We provide self-help document preparation tools. Using this site does not create an attorney-client relationship."
 - **Tier 2, once at signup/first motion:** short inline acknowledgment inside the flow-entry screen (before effort is invested — NN/g up-front disclosure).
 - **Tier 3:** full legalese in Terms only. Never in hero copy; no modal interstitials; hero states what we ARE ("guided tools that help you prepare court-ready RFO documents").
 
 ## Branding fixes (trust liabilities today)
 
-- [manifest.json](../../frontend/public/manifest.json): `short_name` "Motion Writer", `name` "California Motion Writer", `theme_color` `#1d70b8`, `background_color` `#ffffff`.
+- [manifest.json](../../frontend/public/manifest.json): `short_name` "Court Helper", `name` "Family Court Helper", `theme_color` `#1d70b8`, `background_color` `#ffffff`.
 - Replace stock CRA favicon/logo192/logo512 with a simple wordmark/monogram in primary-600 — no scales, gavels, or state seals.
 - `public/index.html` title + meta description are already fixed (2026-07-10 fix pass); remaining work is keeping per-route document titles generic on sensitive routes (see Quick Exit §6).
 

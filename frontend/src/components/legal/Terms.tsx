@@ -30,7 +30,7 @@ export const Terms: React.FC = () => (
 
       <Section title="What we do">
         <p>
-          California Motion Writer helps you prepare California family court forms by
+          Family Court Helper helps you prepare California family court forms by
           guiding you through questions and formatting your own words into court-ready
           documents. We do not tell you what legal strategy to choose, predict how a
           court will rule, or recommend one option over another.

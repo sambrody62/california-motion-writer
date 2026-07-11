@@ -1,10 +1,10 @@
-# California Motion Writer
+# Family Court Helper
 
 Generate professional California family court motions with guided Q&A and AI assistance.
 
 ## 🎯 Overview
 
-California Motion Writer helps self-represented litigants create properly formatted family law motions without expensive legal fees. The application provides:
+Family Court Helper helps self-represented litigants create properly formatted family law motions without expensive legal fees. The application provides:
 
 - **Guided intake process** with smart conditional questions
 - **AI-powered rewriting** to convert plain language into formal legal writing

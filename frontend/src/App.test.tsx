@@ -33,7 +33,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test('renders California Motion Writer app', () => {
+test('renders Family Court Helper app', () => {
   render(<App />);
   // Check for text that appears on the login page (login is shown when user is unauthenticated)
   const titleElement = screen.getByText(/Sign in to your account/i);

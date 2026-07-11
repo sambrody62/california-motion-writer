@@ -1,6 +1,6 @@
 # Trust-Oriented Design & Color Research
 
-**Question:** What design and color principles make California Motion Writer feel trustworthy to stressed, self-represented parents — some in DV situations — sharing sensitive family/legal data?
+**Question:** What design and color principles make Family Court Helper feel trustworthy to stressed, self-represented parents — some in DV situations — sharing sensitive family/legal data?
 
 **Date:** 2026-07-10
 **Method:** Multi-agent deep-research harness — 5 search angles, 24 sources fetched, 118 claims extracted, top 25 adversarially verified by 3-vote panels (24 confirmed, 1 refuted). Four gap dimensions (legal-tech conventions, sensitive-data patterns, trauma-informed design, typography) filled by targeted follow-up agents reading primary sources; those findings are source-quoted but **not** panel-verified, and are marked ◆.

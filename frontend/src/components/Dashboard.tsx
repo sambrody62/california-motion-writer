@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                California Motion Writer
+                Family Court Helper
               </h1>
               <p className="mt-1 text-sm text-gray-600">
                 Welcome back, {user?.email}

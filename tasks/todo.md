@@ -1,4 +1,4 @@
-# Build Plan — California Motion Writer MVP
+# Build Plan — Family Court Helper MVP (formerly California Motion Writer)
 
 Source: PRD_COMPLETE.md + approved plan (Phase A-F).
 Build strategy: orchestrator (this session) + Sonnet subagents for implementation, Haiku for mechanical tasks.

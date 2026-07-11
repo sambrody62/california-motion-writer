@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import {
@@ -41,12 +41,17 @@ export const GameplanCreation: React.FC = () => {
 
   const customization = watch('customization');
   const state = location.state as LocationState;
+  // One plan request per intake submit — StrictMode double-fires this effect
+  // in dev, which paid for two identical Claude calls (L19)
+  const requestedRef = useRef(false);
 
   useEffect(() => {
     if (!state?.caseDescription) {
       navigate('/case/intake');
       return;
     }
+    if (requestedRef.current) return;
+    requestedRef.current = true;
     createGameplan();
   }, []);
 

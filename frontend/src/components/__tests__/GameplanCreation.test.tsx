@@ -64,6 +64,23 @@ describe('GameplanCreation', () => {
     expect(screen.queryByText(/legal strategy/i)).toBeNull();
   });
 
+  test('StrictMode double-mount requests the action plan once', async () => {
+    // L19: StrictMode double-fired the mount effect — two paid Claude calls
+    // (2x /chat/sessions + 2x /chat/messages) per intake submit in dev
+    mockSendMessage.mockResolvedValue(RICH_RESPONSE);
+    render(
+      <React.StrictMode>
+        <BrowserRouter>
+          <GameplanCreation />
+        </BrowserRouter>
+      </React.StrictMode>
+    );
+
+    expect(await screen.findByText('Your Action Plan')).toBeInTheDocument();
+    expect(mockCreateSession).toHaveBeenCalledTimes(1);
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+  });
+
   test('shows an honest fallback state when the LLM output is unparseable', async () => {
     mockSendMessage.mockResolvedValue('OK');
     renderPage();

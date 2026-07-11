@@ -274,6 +274,43 @@ Verified: 208 frontend tests pass, prod build clean (pre-existing lint warnings 
 headless-Chrome visual QA of login page. Note: types/forms.ts color field is dead data
 (nothing consumes it). Remaining spec steps: 4 (Quick Exit hardening), 5 (microcopy pass).
 
+## Real-LLM Browser Test Pass (2026-07-10)
+
+Scope: LLM output quality + real browser E2E only (mock-LLM pass already verified wiring/
+security/PDF — do not re-test at API level). Full plan in the prompt; results will go to
+tasks/real-llm-browser-test-results.md. Stack: backend uvicorn on 127.0.0.1:8000 (fresh
+browser-test.db, rate limits off), CRA on :3000, Playwright-driven Chromium.
+
+- [x] P1. Billing pre-flight: one tiny real Messages call (passed — real completion)
+- [x] P2. Backend up on 127.0.0.1:8000 with fresh SQLite (caught: backend never loads
+      .env itself — must export USE_CLAUDE/ANTHROPIC_API_KEY in the shell or it silently
+      boots mock)
+- [x] P3. Frontend on :3000 — running instance had stale REACT_APP_API_URL=8010 baked in
+      (dead port; every real browser call failed); restarted mid-pass with 127.0.0.1:8000
+- [x] P4. Playwright chromium ready in /tmp/real-llm-browser-test
+- [x] Flow 1: RFO real rewrites — PARTIAL: E2E works, prose quality high, but 3 CRITICAL
+      fabrications (party-role swap, invented $3,200/mo support demand, wrong kids' ages)
+      + wrong primary form on PDF (FL-320 for an RFO; pdf_packet_service.py:29)
+- [x] Flow 2: Gameplan — PARTIAL: extractResponseText fix CONFIRMED live (no raw JSON),
+      real form recs incl. apt FL-410; but Case Analysis renders an echoed prompt
+      fragment, and form-execution completion never registers
+- [x] Flow 3: FL-320 extraction — PARTIAL: case number exact, deadline banner exactly
+      right (Thu Jul 23 2026), fields editable; but petitioner misidentified, extracted
+      requests wiped before render, generated response mislabeled/fabricates
+- [x] Flow 4: Violation — PARTIAL: #/violation/intake CRASHES for every real user
+      (API/frontend shape mismatch, invisible to the API-level mock pass); declaration
+      (via shim) structurally excellent but 2 sworn embellishments + wrong statute cite
+- [x] Flow 5: UX sweep — spinners always present, footer everywhere, FilingChecklist
+      correct; only console noise is 3x benign /profiles/me 404s (+ the L5 crash)
+- [x] Wrap-up: full report in tasks/real-llm-browser-test-results.md (19 findings, L1-L19
+      + env notes); test backend killed; OCR/Gmail remain untested (flags off, out of
+      scope until Google OAuth verification)
+
+VERDICT: LLM layer NOT yet safe to file from — confidently fabricated specifics inside
+otherwise court-appropriate prose. Launch gate: post-generation fact-check against intake
+data + strip uninvited legal authority + markdown rendering. Cost: 28 upstream Claude
+calls, well under $1.
+
 ### Rename to Family Court Helper (DONE 2026-07-10)
 User's final call after 3-round naming exercise (Camino was recommended runner-up;
 CourtReady/Court Compass/Poppy/Kidside/StrongSuit etc. all collision-burned).

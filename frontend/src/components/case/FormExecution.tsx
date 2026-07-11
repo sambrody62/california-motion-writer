@@ -8,6 +8,7 @@ import {
   ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import { FORM_METADATA, FormType } from '../../types/forms';
+import { useFormCompletion } from './useFormCompletion';
 
 interface LocationState {
   gameplan: {
@@ -30,9 +31,12 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentFormIndex, setCurrentFormIndex] = useState(0);
-  const [completedForms, setCompletedForms] = useState<Set<number>>(new Set());
 
   const state = location.state as LocationState;
+  const forms = state?.gameplan?.recommendedForms ?? [];
+  // Completion derives from server-side motion status (L13); markComplete
+  // is the fast path for the return-from-intake location.state signal
+  const { completedForms, markComplete } = useFormCompletion(forms);
 
   useEffect(() => {
     if (!state?.gameplan) {
@@ -45,7 +49,7 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
   useEffect(() => {
     const returnState = location.state as any;
     if (returnState?.completedFormIndex !== undefined) {
-      markFormComplete(returnState.completedFormIndex);
+      markComplete(returnState.completedFormIndex);
       if (onComplete) {
         onComplete(returnState.completedFormIndex);
       }
@@ -57,7 +61,6 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
   }
 
   const { gameplan } = state;
-  const forms = gameplan.recommendedForms;
   const currentForm = forms[currentFormIndex];
   const currentFormMeta = FORM_METADATA[currentForm];
 
@@ -71,10 +74,6 @@ export const FormExecution: React.FC<FormExecutionProps> = ({ onComplete }) => {
         formExecutionFormIndex: currentFormIndex,
       },
     });
-  };
-
-  const markFormComplete = (formIndex: number) => {
-    setCompletedForms(prev => new Set(Array.from(prev).concat(formIndex)));
   };
 
   const goToNextForm = () => {

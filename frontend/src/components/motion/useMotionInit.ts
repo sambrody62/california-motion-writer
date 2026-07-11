@@ -15,6 +15,17 @@ export interface MotionInit {
   isResume: boolean;
 }
 
+// /motion/new/response and /motion/new/rfo are route aliases with no form
+// template of their own — unnormalized they created motions the wizard could
+// never load a step for (L16). Applied before BOTH motion creation and
+// template lookup.
+const normalizeFormType = (raw: string | undefined): string | undefined => {
+  const lowered = raw?.toLowerCase();
+  if (lowered === 'response') return 'FL-320';
+  if (lowered === 'rfo') return 'FL-300';
+  return raw;
+};
+
 // Create a new draft motion (/form/guided/:formType, /motion/guided/:motionType)
 // or load an existing one (/motion/:motionId/edit/:stepNumber) — never both.
 export const useMotionInit = (): MotionInit => {
@@ -27,7 +38,7 @@ export const useMotionInit = (): MotionInit => {
   const navigate = useNavigate();
 
   const isResume = Boolean(motionIdParam);
-  const createFormType = formType || motionType;
+  const createFormType = normalizeFormType(formType || motionType);
 
   const [motionId, setMotionId] = useState<string | null>(null);
   const [currentFormType, setCurrentFormType] = useState<string | undefined>(

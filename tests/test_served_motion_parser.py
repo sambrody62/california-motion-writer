@@ -102,6 +102,40 @@ class TestSanitizeExtracted:
         assert "children" not in parser.sanitize_extracted({"children": "Diego"})
 
 
+class TestChildrenValidatedAgainstDocument:
+    """Extracted children must exist in the uploaded document (finding L3:
+    the extractor invented Mateo 'age 3' found nowhere in the document)."""
+
+    DOC = (
+        "REQUEST FOR ORDER (FL-300)\n"
+        "The children of the marriage are Sofia Delgado, 6 years old, and "
+        "Mateo Delgado, who is 4 years of age."
+    )
+
+    def test_age_not_near_name_is_dropped_but_child_kept(self):
+        out = parser.sanitize_extracted(
+            {"children": [{"name": "Mateo", "age": 3}]}, self.DOC
+        )
+        assert out["children"] == [{"name": "Mateo", "age": None}]
+
+    def test_age_near_name_is_kept(self):
+        out = parser.sanitize_extracted(
+            {"children": [{"name": "Sofia Delgado", "age": 6}]}, self.DOC
+        )
+        assert out["children"] == [{"name": "Sofia Delgado", "age": 6}]
+
+    def test_child_absent_from_document_is_dropped(self):
+        out = parser.sanitize_extracted(
+            {"children": [{"name": "Diego", "age": 5}]}, self.DOC
+        )
+        assert "children" not in out
+
+    def test_empty_document_text_keeps_current_behavior(self):
+        children = [{"name": "Diego", "age": 6}]
+        out = parser.sanitize_extracted({"children": children}, "")
+        assert out["children"] == children
+
+
 class TestExtractDocumentText:
     def test_text_pdf(self):
         content = _text_pdf_bytes(

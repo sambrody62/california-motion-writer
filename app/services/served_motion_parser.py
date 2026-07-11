@@ -11,6 +11,7 @@ depends on the user entering it themselves.
 """
 import io
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -112,7 +113,27 @@ def _normalize_time(value: Any) -> Optional[str]:
     return None
 
 
-def sanitize_extracted(data: Dict[str, Any]) -> Dict[str, Any]:
+def _child_against_document(child: Any, document_text: str) -> Optional[Dict[str, Any]]:
+    """Drop children the document never mentions; drop ages not stated near
+    the name (finding L3: the extractor invented an 'age 3')."""
+    if not isinstance(child, dict):
+        return None
+    name = str(child.get("name") or "").strip()
+    if not name:
+        return None
+    match = re.search(re.escape(name), document_text, re.IGNORECASE)
+    if not match:
+        return None
+    age = child.get("age")
+    if age is None:
+        return child
+    window = document_text[max(0, match.start() - 40):match.end() + 40]
+    if re.search(rf"\b{re.escape(str(age))}\b", window):
+        return child
+    return {**child, "age": None}
+
+
+def sanitize_extracted(data: Dict[str, Any], document_text: str = "") -> Dict[str, Any]:
     """Whitelist + normalize LLM output. date_served can never pass through."""
     out: Dict[str, Any] = {}
 
@@ -135,7 +156,15 @@ def sanitize_extracted(data: Dict[str, Any]) -> Dict[str, Any]:
 
     children = data.get("children")
     if isinstance(children, list) and children:
-        out["children"] = children[:10]
+        children = children[:10]
+        if document_text:
+            children = [
+                kept
+                for kept in (_child_against_document(c, document_text) for c in children)
+                if kept is not None
+            ]
+        if children:
+            out["children"] = children
 
     return out
 
@@ -157,7 +186,7 @@ async def parse_served_motion(content: bytes, ext: str) -> Dict[str, Any]:
         logger.error("Served-motion extraction failed: %s", type(exc).__name__)
         return {"extracted": {}, "notice": NOTICE_LLM_FAILED}
 
-    extracted = sanitize_extracted(parse_llm_json(raw))
+    extracted = sanitize_extracted(parse_llm_json(raw), text)
     logger.info(
         "Served-motion extraction: doc_chars=%d fields=%d tokens=%s model=%s",
         len(text), len(extracted), tokens, model,

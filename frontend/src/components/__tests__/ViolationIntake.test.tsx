@@ -1,10 +1,18 @@
 /**
- * Tests for ViolationIntake component
+ * Tests for the ViolationIntake wizard (steps, navigation, answer serialization).
+ * The result screen is covered in ViolationIntakeResult.test.tsx; shared
+ * fixtures (byte-exact live API shapes) live in
+ * ../violation/__fixtures__/violationIntakeFixtures.ts.
  */
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
+import {
+  MOCK_INTAKE_QUESTIONS,
+  MOCK_TRACKS,
+  MOCK_PROCESS_RESULT,
+} from '../violation/__fixtures__/violationIntakeFixtures';
 
 // --- Mocks ---
 
@@ -30,126 +38,6 @@ jest.mock('../../services/api', () => ({
   },
 }));
 
-// Mock data matching actual backend response shapes
-
-/** GET /violations/intake-questions response */
-const MOCK_INTAKE_QUESTIONS = {
-  questions: {
-    step1: {
-      step_number: 1,
-      step_name: 'Violation Type',
-      description: 'What type of order was violated?',
-      questions: [
-        {
-          id: 'violationType',
-          type: 'select',
-          label: 'Type of Court Order Violated',
-          required: true,
-          options: ['Custody/Visitation', 'Child Support', 'Spousal Support', 'Property', 'Restraining Order'],
-        },
-        {
-          id: 'urgency',
-          type: 'radio',
-          label: 'Is this an emergency situation?',
-          required: true,
-          options: ['Yes', 'No'],
-        },
-      ],
-    },
-    step2: {
-      step_number: 2,
-      step_name: 'Violation Details',
-      description: 'Describe the violation.',
-      questions: [
-        {
-          id: 'violationDescription',
-          type: 'textarea',
-          label: 'Describe the violation in detail',
-          required: true,
-          placeholder: 'Explain what happened...',
-        },
-        {
-          id: 'violationDates',
-          type: 'text',
-          label: 'Date(s) of violation',
-          required: true,
-          placeholder: 'e.g., January 15, 2026',
-        },
-      ],
-    },
-  },
-};
-
-/** GET /violations/tracks response */
-const MOCK_TRACKS = {
-  tracks: [
-    {
-      id: 'emergency',
-      name: 'Emergency (Ex Parte)',
-      timeline: '24-48 hours',
-      description: 'For situations requiring immediate court intervention.',
-      proofStandard: 'Preponderance of evidence',
-      requiredForms: ['FL-300', 'FL-303', 'MC-030'],
-    },
-    {
-      id: 'regular',
-      name: 'Regular RFO',
-      timeline: '3-6 weeks',
-      description: 'Standard enforcement for non-emergency violations.',
-      proofStandard: 'Preponderance of evidence',
-      requiredForms: ['FL-300', 'MC-030'],
-    },
-    {
-      id: 'contempt',
-      name: 'Contempt of Court',
-      timeline: '4-8 weeks',
-      description: 'Quasi-criminal proceeding; higher proof standard applies.',
-      proofStandard: 'Beyond reasonable doubt',
-      requiredForms: ['FL-410', 'FL-411', 'MC-030'],
-    },
-  ],
-  courthouses: [],
-};
-
-/** POST /violations/process response */
-const MOCK_PROCESS_RESULT = {
-  success: true,
-  track: 'regular',
-  trackName: 'Regular RFO',
-  timeline: '3-6 weeks',
-  forms: [
-    {
-      id: 'FL-300',
-      name: 'Request for Order',
-      description: 'Main RFO form',
-      fileName: 'fl300.pdf',
-      required: true,
-    },
-    {
-      id: 'MC-030',
-      name: 'Declaration',
-      description: 'Your declaration',
-      fileName: 'mc030.pdf',
-      required: true,
-    },
-  ],
-  declaration: 'DECLARATION IN SUPPORT OF REQUEST FOR ORDER\n\nI declare...',
-  courthouse: {
-    name: 'San Diego Family Court',
-    address: '1555 6th Ave, San Diego, CA 92101',
-    phone: '(619) 450-7250',
-  },
-  instructions: [
-    '1. Complete all required forms',
-    '2. Make 3 copies of all documents',
-  ],
-  filingFee: '$60.00',
-  serviceRequirements: {
-    method: 'Mail or personal service',
-    deadline: '5 days before hearing',
-  },
-};
-
 const renderWithRouter = (ui: React.ReactElement) =>
   render(<BrowserRouter>{ui}</BrowserRouter>);
 
@@ -160,6 +48,20 @@ beforeAll(async () => {
   const mod = await import('../violation/ViolationIntake');
   ViolationIntake = mod.ViolationIntake;
 });
+
+const renderStepOne = async () => {
+  renderWithRouter(<ViolationIntake />);
+  await waitFor(() => {
+    expect(screen.getByText('Order & Urgency')).toBeInTheDocument();
+  });
+};
+
+const advanceTo = async (stepName: string) => {
+  fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+  await waitFor(() => {
+    expect(screen.getByText(stepName)).toBeInTheDocument();
+  });
+};
 
 describe('ViolationIntake', () => {
   beforeEach(() => {
@@ -175,42 +77,32 @@ describe('ViolationIntake', () => {
 
   describe('wizard rendering', () => {
     test('renders first step questions from mocked API', async () => {
-      renderWithRouter(<ViolationIntake />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Violation Type')).toBeInTheDocument();
-      });
+      await renderStepOne();
 
       expect(
-        screen.getByLabelText(/Type of Court Order Violated/i)
+        screen.getByLabelText(/What type of court order was violated/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Is this an emergency situation/i)
+        screen.getByText(/Is this an emergency requiring immediate court action/i)
       ).toBeInTheDocument();
     });
 
-    test('shows step progress indicator', async () => {
-      renderWithRouter(<ViolationIntake />);
+    test('shows step progress indicator with all three steps', async () => {
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByText(/Step 1/i)).toBeInTheDocument();
-      });
+      expect(screen.getByText(/Step 1 of 3/i)).toBeInTheDocument();
     });
 
     test('Next button is present on first step', async () => {
-      renderWithRouter(<ViolationIntake />);
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
+      expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
     });
 
     test('Previous button is disabled on first step', async () => {
-      renderWithRouter(<ViolationIntake />);
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Previous/i })).toBeDisabled();
-      });
+      expect(screen.getByRole('button', { name: /Previous/i })).toBeDisabled();
     });
 
     test('shows loading state while fetching questions', () => {
@@ -222,55 +114,34 @@ describe('ViolationIntake', () => {
   });
 
   describe('wizard navigation', () => {
-    test('advances to step 2 when Next is clicked on step 1', async () => {
-      renderWithRouter(<ViolationIntake />);
+    test('advances through all three steps', async () => {
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
+      await advanceTo('What Happened');
+      await advanceTo('Resolution & Requested Relief');
 
-      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Violation Details')).toBeInTheDocument();
-      });
+      expect(screen.getByRole('button', { name: /Submit/i })).toBeInTheDocument();
     });
 
     test('going back from step 2 returns to step 1', async () => {
-      renderWithRouter(<ViolationIntake />);
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Violation Details')).toBeInTheDocument();
-      });
+      await advanceTo('What Happened');
 
       fireEvent.click(screen.getByRole('button', { name: /Previous/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Violation Type')).toBeInTheDocument();
+        expect(screen.getByText('Order & Urgency')).toBeInTheDocument();
       });
     });
   });
 
   describe('form submission', () => {
     test('calls process API with collected answers on final submit', async () => {
-      renderWithRouter(<ViolationIntake />);
+      await renderStepOne();
 
-      // Step 1 — advance
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-
-      // Step 2 — submit
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Submit/i })).toBeInTheDocument();
-      });
+      await advanceTo('What Happened');
+      await advanceTo('Resolution & Requested Relief');
       fireEvent.click(screen.getByRole('button', { name: /Submit/i }));
 
       await waitFor(() => {
@@ -292,16 +163,10 @@ describe('ViolationIntake', () => {
         })
       );
 
-      renderWithRouter(<ViolationIntake />);
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Submit/i })).toBeInTheDocument();
-      });
+      await advanceTo('What Happened');
+      await advanceTo('Resolution & Requested Relief');
       fireEvent.click(screen.getByRole('button', { name: /Submit/i }));
 
       await waitFor(() => {
@@ -314,90 +179,42 @@ describe('ViolationIntake', () => {
     });
   });
 
-  describe('result screen', () => {
-    const advanceToResult = async () => {
-      renderWithRouter(<ViolationIntake />);
+  describe('answer serialization', () => {
+    test('checked evidence and relief checkboxes serialize to string arrays', async () => {
+      await renderStepOne();
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Next/i })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      await advanceTo('What Happened');
+      fireEvent.click(screen.getByLabelText('Text messages'));
+      fireEvent.click(screen.getByLabelText('Photos/Videos'));
 
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Submit/i })).toBeInTheDocument();
-      });
+      await advanceTo('Resolution & Requested Relief');
+      fireEvent.click(screen.getByLabelText('Order makeup visitation'));
       fireEvent.click(screen.getByRole('button', { name: /Submit/i }));
 
-      // Wait for the result screen — use a unique element only present there
       await waitFor(() => {
-        expect(screen.getByText(/Based on your answers, this matches the/i)).toBeInTheDocument();
-      });
-    };
-
-    test('result screen shows determined track name', async () => {
-      await advanceToResult();
-      // Track name appears multiple times in the result screen
-      expect(screen.getAllByText(/Regular RFO/i).length).toBeGreaterThan(0);
-    });
-
-    test('result screen uses neutral informational language, not directive', async () => {
-      await advanceToResult();
-      // Must contain neutral framing
-      expect(
-        screen.getByText(/Based on your answers, this matches the/i)
-      ).toBeInTheDocument();
-      // Must NOT contain directive language
-      expect(screen.queryByText(/you should file/i)).not.toBeInTheDocument();
-    });
-
-    test('result screen shows all three tracks for comparison', async () => {
-      await advanceToResult();
-      expect(screen.getByText(/Emergency \(Ex Parte\)/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/Regular RFO/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Contempt of Court/i)).toBeInTheDocument();
-    });
-
-    test('result screen lists required forms', async () => {
-      await advanceToResult();
-      // Form names may appear in multiple places (forms list + declaration text)
-      expect(screen.getAllByText(/Request for Order/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Declaration/i).length).toBeGreaterThan(0);
-    });
-
-    test('result screen shows courthouse routing', async () => {
-      await advanceToResult();
-      expect(screen.getByText(/San Diego Family Court/i)).toBeInTheDocument();
-    });
-
-    test('result screen shows declaration text', async () => {
-      await advanceToResult();
-      expect(
-        screen.getByText(/DECLARATION IN SUPPORT OF REQUEST FOR ORDER/i)
-      ).toBeInTheDocument();
-    });
-
-    test('copy button is present for declaration', async () => {
-      await advanceToResult();
-      expect(
-        screen.getByRole('button', { name: /Copy Declaration/i })
-      ).toBeInTheDocument();
-    });
-
-    test('copy button calls clipboard API', async () => {
-      const writeText = jest.fn().mockResolvedValue(undefined);
-      Object.defineProperty(navigator, 'clipboard', {
-        value: { writeText },
-        configurable: true,
+        expect(mockProcess).toHaveBeenCalledTimes(1);
       });
 
-      await advanceToResult();
-      fireEvent.click(screen.getByRole('button', { name: /Copy Declaration/i }));
+      expect(mockProcess.mock.calls[0][0]).toMatchObject({
+        evidence: ['Text messages', 'Photos/Videos'],
+        requestedRelief: ['Order makeup visitation'],
+      });
+    });
+
+    test('urgency radio answer serializes to a boolean', async () => {
+      await renderStepOne();
+
+      fireEvent.click(screen.getByLabelText('Yes'));
+
+      await advanceTo('What Happened');
+      await advanceTo('Resolution & Requested Relief');
+      fireEvent.click(screen.getByRole('button', { name: /Submit/i }));
 
       await waitFor(() => {
-        expect(writeText).toHaveBeenCalledWith(
-          expect.stringContaining('DECLARATION IN SUPPORT')
-        );
+        expect(mockProcess).toHaveBeenCalledTimes(1);
       });
+
+      expect(mockProcess.mock.calls[0][0].urgency).toBe(true);
     });
   });
 });

@@ -43,6 +43,11 @@ function parseSteps(questionsMap: Record<string, WizardStep>): WizardStep[] {
 
 function toArray(val: any): string[] {
   if (Array.isArray(val)) return val;
+  // Checkbox groups register as `${id}.${option}`, so RHF collects them as
+  // { 'Text messages': true, Emails: false, ... } — keep the checked options.
+  if (val && typeof val === 'object') {
+    return Object.keys(val).filter((k) => (val as any)[k]);
+  }
   if (typeof val === 'string' && val) return val.split(',').map((s: string) => s.trim());
   return [];
 }

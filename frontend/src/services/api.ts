@@ -85,9 +85,12 @@ export const chat = {
 };
 
 // Profile endpoints
+// Collection routes are mounted at "/" under their prefixes — the trailing
+// slash is canonical (a bare path 307-redirects, which can drop Authorization
+// on cross-origin POSTs).
 export const profile = {
   create: async (data: any) => {
-    const response = await api.post('/profiles', data);
+    const response = await api.post('/profiles/', data);
     return response.data;
   },
 
@@ -105,12 +108,12 @@ export const profile = {
 // Motions endpoints
 export const motions = {
   create: async (data: any) => {
-    const response = await api.post('/motions', data);
+    const response = await api.post('/motions/', data);
     return response.data;
   },
 
   list: async () => {
-    const response = await api.get('/motions');
+    const response = await api.get('/motions/');
     return response.data;
   },
 

@@ -2,7 +2,7 @@
  * Tests for API service — axios-based implementation
  */
 import mockAxios from '../../__mocks__/axios';
-import { auth, motionAPI, documentAPI } from '../api';
+import { auth, motionAPI, documentAPI, motions, profile } from '../api';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -28,6 +28,35 @@ describe('auth.login', () => {
 
     const result = await auth.login('user@example.com', 'secret');
     expect(result).toEqual(payload);
+  });
+});
+
+// Collection endpoints are mounted at "/" under their router prefixes, so the
+// canonical paths carry a trailing slash. Without it every call takes a 307
+// redirect, and redirected cross-origin POSTs can drop Authorization.
+describe('collection endpoints use canonical trailing-slash paths', () => {
+  test('motions.create POSTs to /motions/', async () => {
+    mockAxios.post.mockResolvedValueOnce({ data: { id: 'motion-1' } });
+
+    await motions.create({ motion_type: 'RFO' });
+
+    expect(mockAxios.post).toHaveBeenCalledWith('/motions/', { motion_type: 'RFO' });
+  });
+
+  test('motions.list GETs /motions/', async () => {
+    mockAxios.get.mockResolvedValueOnce({ data: [] });
+
+    await motions.list();
+
+    expect(mockAxios.get).toHaveBeenCalledWith('/motions/');
+  });
+
+  test('profile.create POSTs to /profiles/', async () => {
+    mockAxios.post.mockResolvedValueOnce({ data: { id: 'profile-1' } });
+
+    await profile.create({ county: 'San Diego' });
+
+    expect(mockAxios.post).toHaveBeenCalledWith('/profiles/', { county: 'San Diego' });
   });
 });
 

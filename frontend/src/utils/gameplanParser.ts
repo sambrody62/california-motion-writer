@@ -85,6 +85,15 @@ export const parseLLMResponse = (response: string): ParsedGameplan => {
   };
 };
 
+// Lines that echo the user's own prompt back (quoted fragments, imperative
+// asks) or that are headers themselves must never be presented as analysis —
+// the live LLM rendered '"Help me prepare a Form FL-410 …"' as the entire
+// Case Analysis section (L10)
+const isEchoedFragmentOrHeader = (line: string): boolean =>
+  /^["'“”‘’]/.test(line) ||
+  /^["'“”‘’]?\s*(help me|please|can you|i need|i want)\b/i.test(line) ||
+  line.endsWith(':');
+
 const extractSection = (text: string, keywords: string[]): string | null => {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -93,7 +102,12 @@ const extractSection = (text: string, keywords: string[]): string | null => {
       // Look for content in next few lines
       for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
         const nextLine = lines[j].trim();
-        if (nextLine && !nextLine.match(/^\d+\./) && nextLine.length > 20) {
+        if (
+          nextLine &&
+          !nextLine.match(/^\d+\./) &&
+          nextLine.length > 20 &&
+          !isEchoedFragmentOrHeader(nextLine)
+        ) {
           return nextLine;
         }
       }

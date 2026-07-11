@@ -46,6 +46,42 @@ describe('parseLLMResponse', () => {
     expect(data.analysis).toMatch(/couldn't|general/i);
     expect(data.nextSteps.length).toBeGreaterThan(0);
   });
+
+  it('rejects an echoed prompt fragment instead of presenting it as analysis', () => {
+    // The exact fragment the live LLM run rendered as the entire "Case
+    // Analysis" section (real-LLM browser finding L10, flow2-05-gameplan.png)
+    const echoedFragmentResponse = `
+Case Analysis:
+"Help me prepare a Form FL-410 (enforce the order)."
+`;
+    const { data, isFallback } = parseLLMResponse(echoedFragmentResponse);
+
+    expect(isFallback).toBe(true);
+    expect(data.analysis).not.toMatch(/help me prepare/i);
+    expect(data.analysis).toMatch(/couldn't analyze/i);
+  });
+
+  it('still extracts real prose following a Case Analysis: header', () => {
+    const response = `
+Case Analysis:
+Your situation involves repeated custody order violations that the court can enforce.
+`;
+    const { data, isFallback } = parseLLMResponse(response);
+
+    expect(isFallback).toBe(false);
+    expect(data.analysis).toMatch(/repeated custody order violations/i);
+  });
+
+  it('skips header-like candidate lines ending with a colon in favor of prose', () => {
+    const response = `
+1. Case Analysis
+Detailed Background Assessment:
+The parenting schedule has broken down because exchanges are being missed.
+`;
+    const { data } = parseLLMResponse(response);
+
+    expect(data.analysis).toMatch(/parenting schedule has broken down/i);
+  });
 });
 
 describe('extractResponseText', () => {

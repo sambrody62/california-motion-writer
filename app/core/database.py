@@ -126,14 +126,18 @@ class Database:
         """Create all tables (idempotent, race-tolerant across workers)"""
         from sqlalchemy.exc import OperationalError, ProgrammingError
 
+        from app.core.schema_upgrades import apply_column_upgrades
+
         try:
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                await apply_column_upgrades(conn)
         except (OperationalError, ProgrammingError) as exc:
             # With multiple uvicorn workers, both can pass create_all's
             # existence check and race the CREATE; the loser's error means
-            # the tables exist, which is the outcome we wanted.
-            if "already exists" in str(exc).lower():
+            # the tables/columns exist, which is the outcome we wanted.
+            message = str(exc).lower()
+            if "already exists" in message or "duplicate column" in message:
                 logger.info("Tables already created by a concurrent worker")
             else:
                 raise

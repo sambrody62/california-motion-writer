@@ -41,6 +41,7 @@ class Motion(Base):
     courthouse = Column(String(100))  # Which courthouse to file at
     intake_data = Column(JSON)  # Store complete intake responses
     generated_text = Column(Text)  # Generated declaration or other text
+    fact_check = Column(JSON)  # Fact-gate corrections report (nullable)
     
     # Filing Info
     filing_date = Column(Date)

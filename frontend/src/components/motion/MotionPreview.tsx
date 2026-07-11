@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motionAPI, documentAPI, evidenceAPI, profileAPI } from '../../services/api';
 import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
-import { MotionPreviewBanners } from './MotionPreviewBanners';
+import { MotionPreviewBanners, FactCheck } from './MotionPreviewBanners';
 import { MotionPreviewDeclaration } from './MotionPreviewDeclaration';
 import { FilingChecklist } from './FilingChecklist';
 
@@ -25,6 +25,7 @@ interface Motion {
   hearing_time: string;
   status: string;
   generated_text?: string | null;
+  fact_check?: FactCheck | null;
 }
 
 interface LocationState {
@@ -171,6 +172,7 @@ export const MotionPreview: React.FC = () => {
           pdfError={pdfError}
           generating={generating}
           onRetryPDF={generatePDF}
+          factCheck={motion?.fact_check ?? null}
         />
 
         {/* Filing checklist — shown once the user has their PDF in hand */}

@@ -1,5 +1,11 @@
 import React from 'react';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/20/solid';
+import { CorrectionsList, Correction } from '../shared/CorrectionsList';
+
+export interface FactCheck {
+  version: number;
+  corrections: Correction[];
+}
 
 interface MotionPreviewBannersProps {
   llmFailed: boolean;
@@ -7,6 +13,7 @@ interface MotionPreviewBannersProps {
   pdfError: string | null;
   generating: boolean;
   onRetryPDF: () => void;
+  factCheck?: FactCheck | null;
 }
 
 export const MotionPreviewBanners: React.FC<MotionPreviewBannersProps> = ({
@@ -15,8 +22,14 @@ export const MotionPreviewBanners: React.FC<MotionPreviewBannersProps> = ({
   pdfError,
   generating,
   onRetryPDF,
+  factCheck,
 }) => (
   <>
+    {/* Fact-check corrections — review every corrected/flagged detail before filing */}
+    {factCheck?.corrections && factCheck.corrections.length > 0 && (
+      <CorrectionsList corrections={factCheck.corrections} />
+    )}
+
     {/* LLM failure notice — non-blocking */}
     {llmFailed && (
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">

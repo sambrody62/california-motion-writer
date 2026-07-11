@@ -29,6 +29,7 @@ elif not USE_MOCK_LLM and not USE_CLAUDE:
 from app.core.config import settings
 from app.middleware.rate_limit_config import get_token_limit
 from app.services.cost_monitoring_service import track_llm_cost, check_budget
+from app.services.fact_gate.prompt_guard import build_fact_anchor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -158,16 +159,17 @@ Supporting Facts:
 - Current Orders: {context.get('existing_orders', 'None specified')}
 - Changed Circumstances: {context.get('changed_circumstances', 'As described')}
 
+{build_fact_anchor(context)}
+
 Instructions:
 1. Rewrite in formal court language appropriate for California family court
 2. Organize into clear, numbered paragraphs
 3. Start each factual assertion with specific dates when possible
 4. Use "Petitioner/Respondent" not "I/me" (except in declarations)
-5. Include relevant California Family Code sections where appropriate
-6. Ensure compliance with local rules for {context.get('county', 'California')} County
-7. Maintain professional, neutral tone
-8. Focus on best interests of children (if applicable)
-9. Keep concise and clear
+5. Do NOT cite any statute, rule of court, case, or courthouse address. Do NOT reference other forms or filing fees.
+6. Maintain professional, neutral tone
+7. Focus on best interests of children (if applicable)
+8. Keep concise and clear
 
 Style Guidelines:
 - Use active voice

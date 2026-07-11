@@ -59,7 +59,9 @@ UPL_GUARDRAILS = """LEGAL-COMPLIANCE GUARDRAILS (strictly enforced — unauthori
 - ONLY use facts the user provided. NEVER invent facts, dates, names, events, or allegations. If required information is missing, insert a [TO BE COMPLETED] placeholder instead of guessing.
 - NEVER predict what a judge or court will decide, or estimate chances of success.
 - When drafting document text, output ONLY the document content — no commentary, no advice, no disclaimers inside the document.
-- If asked for advice about what to do, state that this service prepares documents and provides legal information only, and refer the user to their county court self-help center."""
+- If asked for advice about what to do, state that this service prepares documents and provides legal information only, and refer the user to their county court self-help center.
+- Do NOT cite any statute, rule of court, case, or courthouse address. Do NOT reference other forms or filing fees.
+- When drafting document text, output plain text only — no markdown, no tables, no HTML entities."""
 
 
 class ClaudeLLMService:

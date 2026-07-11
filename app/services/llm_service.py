@@ -3,7 +3,7 @@ LLM Service for motion rewriting using Vertex AI
 """
 import os
 import json
-from typing import Dict, Any, Optional, List
+from typing import Awaitable, Callable, Dict, Any, Optional, List
 from pathlib import Path
 
 # Conditionally import GCP services
@@ -471,12 +471,14 @@ The following California best interests factors support this request:
         self,
         motion_type: str,
         all_drafts: List[Dict[str, Any]],
-        profile_data: Dict[str, Any]
+        profile_data: Dict[str, Any],
+        should_abort: Optional[Callable[[], Awaitable[bool]]] = None
     ) -> Dict[str, Any]:
         """Process complete motion through LLM for all sections"""
         results = []
         total_tokens = 0
-        
+        aborted = False
+
         # Build context from profile and answers
         context = {
             "party_role": "Petitioner" if profile_data.get("is_petitioner") else "Respondent",
@@ -489,6 +491,10 @@ The following California best interests factors support this request:
         
         # Process each draft section
         for draft in all_drafts:
+            # Stop paying for sections nobody is waiting on (finding L18)
+            if should_abort and await should_abort():
+                aborted = True
+                break
             section_name = draft.get("step_name", "")
             answers = draft.get("question_data", {})
             
@@ -514,6 +520,7 @@ The following California best interests factors support this request:
             "sections": results,
             "total_tokens": total_tokens,
             "model": self._backend_model_name(),
+            "aborted": aborted,
             "success": all(r.get("success") for r in results)
         }
 

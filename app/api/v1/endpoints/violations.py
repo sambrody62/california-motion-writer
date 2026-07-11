@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.services.violation_intake_steps import build_wizard_steps
 from app.services.violation_service import ViolationFilingService
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User, Profile
@@ -138,11 +139,11 @@ async def get_filing_tracks(
 async def get_intake_questions(
     current_user: User = Depends(get_current_user)
 ):
-    """Get the intake questions for violation filing"""
+    """Get the violation intake questions as the wizard steps the frontend renders"""
     config = violation_service.config.get("violationFiling", {})
     questions = config.get("intakeQuestions", {})
 
-    return {"questions": questions}
+    return {"questions": build_wizard_steps(questions)}
 
 @router.get("/forms/{track}")
 async def get_track_forms(

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.services.fact_gate import GateContext, run_fact_gate
 from app.services.violation_intake_steps import build_wizard_steps
 from app.services.violation_service import ViolationFilingService
 from app.api.v1.endpoints.auth import get_current_user
@@ -45,10 +46,29 @@ class ViolationFilingResponse(BaseModel):
     instructions: list[str]
     filingFee: str
     serviceRequirements: Dict[str, Any]
+    corrections: list[Dict[str, Any]] = []
     error: Optional[str] = None
 
 # Initialize service
 violation_service = ViolationFilingService()
+
+
+def _declaration_gate_context(
+    intake: Dict[str, Any], profile_data: Optional[Dict[str, Any]]
+) -> GateContext:
+    """Ground truth for gating a generated declaration (findings L4, L7, L15)."""
+    profile_data = profile_data or {}
+    return GateContext(
+        motion_kind="declaration",
+        section_name="declaration",
+        party_name=profile_data.get("party_name") or "",
+        other_party_name=profile_data.get("other_party_name") or "",
+        is_petitioner=bool(profile_data.get("is_petitioner", True)),
+        case_number=profile_data.get("case_number") or "",
+        county=profile_data.get("county") or "",
+        children=profile_data.get("children_info") or [],
+        intake_values=intake,
+    )
 
 @router.post("/process", response_model=ViolationFilingResponse)
 async def process_violation_filing(
@@ -75,10 +95,17 @@ async def process_violation_filing(
         profile = result.scalar_one_or_none()
         profile_data = None
         if profile:
+            # Full party context — under-passing here left the fact gate
+            # unable to fill "[PETITIONER'S FULL LEGAL NAME]" placeholders (L15)
             profile_data = {
                 "city": profile.city,
                 "zipCode": profile.zip_code,
-                "county": profile.county
+                "county": profile.county,
+                "party_name": profile.party_name,
+                "other_party_name": profile.other_party_name,
+                "is_petitioner": profile.is_petitioner,
+                "case_number": profile.case_number,
+                "children_info": profile.children_info,
             }
 
         # Process the violation filing
@@ -94,6 +121,14 @@ async def process_violation_filing(
                 detail=result.get("error", "Failed to process violation filing")
             )
 
+        # Gate the generated declaration against user-entered facts
+        gated = run_fact_gate(
+            result["declaration"],
+            _declaration_gate_context(intake_data.dict(), profile_data),
+        )
+        result["declaration"] = gated.text
+        result["corrections"] = [c.as_dict() for c in gated.corrections]
+
         # Save to database as a motion
         motion = Motion(
             user_id=current_user.id,
@@ -104,7 +139,8 @@ async def process_violation_filing(
             courthouse=result["courthouse"].get("name"),
             status="draft",
             intake_data=intake_data.dict(),
-            generated_text=result["declaration"]
+            generated_text=result["declaration"],
+            fact_check={"version": 1, "corrections": result["corrections"]}
         )
         db.add(motion)
         await db.commit()
@@ -181,11 +217,18 @@ async def generate_declaration(
             legal_tone=True
         )
 
+        # Gate against user-entered facts (no profile on this endpoint)
+        gated = run_fact_gate(
+            enhanced.get("enhanced_text", declaration_text),
+            _declaration_gate_context(intake_data.dict(), None),
+        )
+
         return {
             "success": True,
-            "declaration": enhanced.get("enhanced_text", declaration_text),
+            "declaration": gated.text,
+            "corrections": [c.as_dict() for c in gated.corrections],
             "originalLength": len(declaration_text),
-            "enhancedLength": len(enhanced.get("enhanced_text", declaration_text))
+            "enhancedLength": len(gated.text)
         }
 
     except Exception as e:

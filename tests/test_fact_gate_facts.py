@@ -10,6 +10,8 @@ from datetime import date
 from decimal import Decimal
 
 from app.services.fact_gate.allowed_facts import build_allowed_facts
+from app.services.fact_gate.fact_check import check_ages, check_amounts, check_dates
+from app.services.fact_gate.party_check import fill_placeholders
 from app.services.fact_gate.types import GateContext
 
 TODAY = date(2026, 7, 11)
@@ -102,3 +104,156 @@ class TestAllowedFactsAddressTokens:
         assert facts.dates == set()
         assert facts.ages == {}
         assert facts.address_tokens == set()
+
+
+class TestCheckAmounts:
+    def test_income_amount_in_support_sentence_blocked(self):
+        # The real L2 failure: $3,200 was the user's own monthly income.
+        facts = build_allowed_facts(_ctx(intake_values={"monthly_income": "3200"}))
+        text = (
+            "Order Respondent to pay Petitioner child support of no less than "
+            "$3,200.00 per month, allocated between Sofia Delgado and Mateo Delgado."
+        )
+        out, corrections = check_amounts(text, facts)
+        assert "$3,200.00" not in out
+        assert "[TO BE COMPLETED] per month" in out
+        assert corrections[0].type == "amount"
+        assert corrections[0].severity == "needs_review"
+        assert "income" in corrections[0].message
+
+    def test_support_sourced_amount_in_support_sentence_preserved(self):
+        facts = build_allowed_facts(_ctx(intake_values={"spousal_support_amount": "500"}))
+        text = "Petitioner requests spousal support of $500 per month."
+        out, corrections = check_amounts(text, facts)
+        assert out == text
+        assert corrections == []
+
+    def test_unknown_amount_blocked(self):
+        facts = build_allowed_facts(_ctx(intake_values={"monthly_income": "3200"}))
+        out, corrections = check_amounts("The filing fee is $435.", facts)
+        assert "$435" not in out
+        assert "[TO BE COMPLETED]" in out
+        assert corrections[0].severity == "needs_review"
+
+    def test_known_amount_outside_support_sentence_preserved(self):
+        facts = build_allowed_facts(_ctx(intake_values={"monthly_income": "3200"}))
+        text = "Petitioner earns $3,200.00 per month as a dental assistant."
+        out, corrections = check_amounts(text, facts)
+        assert out == text
+        assert corrections == []
+
+
+class TestCheckDates:
+    def test_range_trimmed_to_entered_endpoint(self):
+        # The real L4 failure: only June 20 was entered; June 22 never was.
+        facts = build_allowed_facts(_ctx(intake_values={"violation_dates": "June 20, 2026"}))
+        text = (
+            "Throughout the weekend of June 20–22, 2026, Respondent's cellular "
+            "telephone was turned off or otherwise unavailable."
+        )
+        out, corrections = check_dates(text, facts)
+        assert "June 20, 2026" in out
+        assert "22" not in out
+        assert corrections[0].type == "date"
+        assert corrections[0].severity == "needs_review"
+
+    def test_entered_date_preserved_across_formats(self):
+        # ISO in intake matches long-form in output.
+        facts = build_allowed_facts(_ctx(intake_values={"incident_date": "2026-06-14"}))
+        text = (
+            "On or about June 14, 2026, a Saturday, Petitioner and the minor "
+            "children waited at the designated location."
+        )
+        out, corrections = check_dates(text, facts)
+        assert out == text
+        assert corrections == []
+
+    def test_unknown_date_blocked(self):
+        facts = build_allowed_facts(_ctx(intake_values={"incident_date": "2026-06-14"}))
+        out, corrections = check_dates("The hearing is set for August 14, 2026.", facts)
+        assert "August 14, 2026" not in out
+        assert "[TO BE COMPLETED]" in out
+        assert corrections[0].severity == "needs_review"
+
+    def test_fully_unknown_range_blocked(self):
+        facts = build_allowed_facts(_ctx(intake_values={}))
+        out, _ = check_dates("He was away June 20-22, 2026 without notice.", facts)
+        assert "June 20" not in out
+        assert "[TO BE COMPLETED]" in out
+
+    def test_dob_always_allowed(self):
+        facts = build_allowed_facts(_ctx(children=CHILDREN))
+        text = "Sofia Delgado was born on March 22, 2018."
+        out, corrections = check_dates(text, facts)
+        assert out == text
+        assert corrections == []
+
+    def test_yearless_intake_date_allows_dated_output(self):
+        facts = build_allowed_facts(_ctx(intake_values={"story": "it happened on June 14"}))
+        out, corrections = check_dates("The exchange failed on June 14, 2026.", facts)
+        assert corrections == []
+        assert "June 14, 2026" in out
+
+
+class TestCheckAges:
+    def _facts(self, children=CHILDREN):
+        return build_allowed_facts(_ctx(children=children))
+
+    def test_years_old_corrected_from_dob(self):
+        out, corrections = check_ages("Sofia is 6 years old.", self._facts())
+        assert out == "Sofia is 8 years old."
+        assert corrections[0].type == "age"
+        assert corrections[0].severity == "corrected"
+
+    def test_paren_age_corrected(self):
+        out, _ = check_ages("Mateo Delgado (age 4) attends preschool.", self._facts())
+        assert "(age 5)" in out
+
+    def test_age_seven_corrected_to_eight(self):
+        out, _ = check_ages("Sofia (age 7) attends Jefferson Elementary.", self._facts())
+        assert "(age 8)" in out
+
+    def test_bare_paren_number_after_name_corrected(self):
+        out, _ = check_ages("The children are Sofia (6) and Mateo (4).", self._facts())
+        assert "Sofia (8)" in out
+        assert "Mateo (5)" in out
+
+    def test_correct_age_untouched(self):
+        text = "Sofia is 8 years old."
+        out, corrections = check_ages(text, self._facts())
+        assert out == text
+        assert corrections == []
+
+    def test_no_name_single_child_corrected(self):
+        facts = self._facts(children=[CHILDREN[0]])
+        out, _ = check_ages("The minor child is age 7.", facts)
+        assert "age 8" in out
+
+    def test_no_name_multiple_children_flag_only(self):
+        text = "The children are age 7."
+        out, corrections = check_ages(text, self._facts())
+        assert out == text
+        assert len(corrections) == 1
+        assert corrections[0].replacement is None
+
+    def test_duration_years_not_treated_as_age(self):
+        text = "The parties separated over 3 years ago, and Sofia lives with Petitioner."
+        out, corrections = check_ages(text, self._facts())
+        assert out == text
+        assert corrections == []
+
+    def test_number_paren_without_child_name_untouched(self):
+        text = "Petitioner waited approximately forty-five (45) minutes before leaving."
+        out, corrections = check_ages(text, self._facts())
+        assert out == text
+        assert corrections == []
+
+
+class TestPlaceholderFilledFromProfile:
+    def test_petitioner_full_legal_name_filled(self):
+        out, corrections = fill_placeholders(
+            "[PETITIONER'S FULL LEGAL NAME] declares under penalty of perjury:",
+            _ctx(),
+        )
+        assert out == "Maria Delgado declares under penalty of perjury:"
+        assert corrections[0].type == "placeholder_filled"

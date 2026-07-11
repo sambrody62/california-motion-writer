@@ -3,17 +3,16 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motionAPI, profileAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  PlusIcon,
   DocumentTextIcon,
   ClockIcon,
   UserIcon,
   ChatBubbleBottomCenterTextIcon,
   SparklesIcon,
   ArrowRightIcon,
-  ShieldExclamationIcon,
-  ScaleIcon
+  ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
+import { DashboardActions } from './DashboardActions';
 
 interface Motion {
   id: string;
@@ -183,28 +182,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Enforce an existing order */}
-        <div className="mb-8">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start space-x-3">
-              <ScaleIcon className="h-6 w-6 text-primary-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Enforce an existing order</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  If the other party is not following a court order, you may have options to enforce it.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/violation/intake')}
-              aria-label="Enforce an existing order"
-              className="inline-flex items-center px-4 py-2 border border-primary-300 shadow-sm text-sm font-medium rounded-md text-primary-700 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex-shrink-0"
-            >
-              Get started
-              <ArrowRightIcon className="h-4 w-4 ml-2" />
-            </button>
-          </div>
-        </div>
+        {/* Direct entry points: enforce / respond / request an order */}
+        <DashboardActions />
 
         {/* How It Works */}
         <div className="mb-12">

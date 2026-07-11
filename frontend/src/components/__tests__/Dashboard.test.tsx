@@ -87,6 +87,12 @@ describe('Dashboard', () => {
     expect(screen.queryByText(/Get Legal Help/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/legal strategy/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/legal gameplan/i)).not.toBeInTheDocument();
+
+    // The entry-point cards must keep document-preparation phrasing too
+    expect(screen.getByText(/Prepare a Response to Request for Order/i)).toBeInTheDocument();
+    expect(screen.getByText(/Prepare a Request for Order/i)).toBeInTheDocument();
+    expect(screen.queryByText(/legal advice/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/legal help/i)).not.toBeInTheDocument();
   });
 
   test('shows profile setup notice when no profile exists', async () => {
@@ -417,5 +423,47 @@ describe('Dashboard', () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('/violation/intake');
+  });
+
+  test('displays respond-to-motion card', async () => {
+    // L17: FL-320 was reachable only by typing the URL — no dashboard entry
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Respond to a motion you were served/i)).toBeInTheDocument();
+    });
+  });
+
+  test('respond-to-motion card links to /motion/guided/FL-320', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      const respondButton = screen.getByRole('button', {
+        name: /Respond to a motion you were served/i,
+      });
+      fireEvent.click(respondButton);
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/motion/guided/FL-320');
+  });
+
+  test('displays request-order card', async () => {
+    // L17: no direct RFO start existed — only the gameplan/enforce paths
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Request a court order \(FL-300\)/i)).toBeInTheDocument();
+    });
+  });
+
+  test('request-order card links to /form/guided/FL-300', async () => {
+    renderWithRouter(<Dashboard />);
+
+    await waitFor(() => {
+      const requestButton = screen.getByRole('button', { name: /Request a court order/i });
+      fireEvent.click(requestButton);
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/form/guided/FL-300');
   });
 });

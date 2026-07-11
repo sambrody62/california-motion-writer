@@ -277,6 +277,42 @@ describe('GuidedIntake', () => {
 });
 
 // -------------------------------------------------------------------
+// One motion per guided-intake entry (L11: StrictMode double-effect
+// created a paired POST /motions/ and an orphan draft on every visit)
+// -------------------------------------------------------------------
+
+describe('GuidedIntake — one motion per entry', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFormType = 'FL_300';
+    mockUseLocation.mockReturnValue({ state: null, pathname: '/' });
+    mockCreate.mockResolvedValue({ id: 'motion-123' });
+    mockGetDrafts.mockResolvedValue([]);
+    mockSaveDraft.mockResolvedValue({ success: true });
+    mockProcessWithLLM.mockResolvedValue({ success: true });
+    mockGetQuestions.mockResolvedValue({ data: MOCK_STEP_DATA });
+    mockSaveAnswer.mockResolvedValue({ success: true });
+    mockEvaluateCondition.mockResolvedValue({ data: { result: true } });
+    mockGetProfile.mockResolvedValue({});
+  });
+
+  test('StrictMode double-mount creates exactly one motion', async () => {
+    render(
+      <React.StrictMode>
+        <BrowserRouter>
+          <GuidedIntake />
+        </BrowserRouter>
+      </React.StrictMode>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Your Name/i)).toBeInTheDocument();
+    });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// -------------------------------------------------------------------
 // FL-320 deadline warning
 // -------------------------------------------------------------------
 

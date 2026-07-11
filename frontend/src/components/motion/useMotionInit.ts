@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motionAPI } from '../../services/api';
 
@@ -35,6 +35,9 @@ export const useMotionInit = (): MotionInit => {
   );
   const [resumeAnswers, setResumeAnswers] = useState<Record<string, unknown>>({});
   const initialStep = isResume ? parseInt(stepNumber || '1', 10) || 1 : 1;
+  // One init per entry — StrictMode double-fires this effect in dev, which
+  // created a paired POST /motions/ and an orphan draft per visit (L11)
+  const initKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadExistingMotion = async () => {
@@ -68,6 +71,10 @@ export const useMotionInit = (): MotionInit => {
         navigate('/dashboard');
       }
     };
+
+    const initKey = motionIdParam ?? `create:${createFormType}`;
+    if (initKeyRef.current === initKey) return;
+    initKeyRef.current = initKey;
 
     if (motionIdParam) {
       loadExistingMotion();

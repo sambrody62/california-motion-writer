@@ -154,31 +154,20 @@ async def get_motion(
     )
     drafts = drafts_result.scalars().all()
 
-    motion_type_val = motion.motion_type.value if hasattr(motion.motion_type, "value") else motion.motion_type
-    return {
-        "id": str(motion.id),
-        "motion_type": motion_type_val,
-        "status": motion.status,
-        "title": motion.title,
-        "description": motion.description,
-        "case_number": await _user_case_number(current_user, db),
-        "case_caption": motion.case_caption,
-        "filing_track": motion.filing_track,
-        "courthouse": motion.courthouse,
-        "intake_data": motion.intake_data,
-        "created_at": motion.created_at,
-        "updated_at": motion.updated_at,
-        "drafts": [
-            {
-                "step_number": d.step_number,
-                "step_name": d.step_name,
-                "question_data": d.question_data,
-                "llm_output": d.llm_output,
-                "is_complete": d.is_complete,
-            }
-            for d in drafts
-        ],
-    }
+    detail = _motion_to_response(motion, await _user_case_number(current_user, db)).model_dump()
+    detail["case_caption"] = motion.case_caption
+    detail["generated_text"] = motion.generated_text
+    detail["drafts"] = [
+        {
+            "step_number": d.step_number,
+            "step_name": d.step_name,
+            "question_data": d.question_data,
+            "llm_output": d.llm_output,
+            "is_complete": d.is_complete,
+        }
+        for d in drafts
+    ]
+    return detail
 
 
 @router.put("/{motion_id}", response_model=MotionResponse)

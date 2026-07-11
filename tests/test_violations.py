@@ -108,6 +108,45 @@ async def test_violation_motion_generates_pdf(client: AsyncClient, auth_headers:
     assert pdf.content[:4] == b"%PDF"
 
 
+async def test_motion_detail_returns_violation_declaration(
+    client: AsyncClient, auth_headers: dict
+):
+    """Regression for the 2026-07-11 real-LLM finding L14: violations store the
+    declaration on generated_text with no drafts, but motion detail omitted it,
+    so the preview page had nothing to review before filing."""
+    await _create_profile(client, auth_headers)
+    resp = await client.post(
+        "/api/v1/violations/process", json=_intake(), headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    declaration = resp.json()["declaration"]
+
+    listing = await client.get("/api/v1/motions/", headers=auth_headers)
+    motion_id = [m for m in listing.json() if m["motion_type"] == "VIOLATION"][0]["id"]
+
+    detail = await client.get(f"/api/v1/motions/{motion_id}", headers=auth_headers)
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["generated_text"] == declaration
+    assert body["drafts"] == []
+
+
+async def test_motion_detail_keeps_generated_text_null_for_rfo(
+    client: AsyncClient, auth_headers: dict
+):
+    resp = await client.post(
+        "/api/v1/motions/",
+        json={"motion_type": "RFO", "title": "Custody RFO"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201, resp.text
+    motion_id = resp.json()["id"]
+
+    detail = await client.get(f"/api/v1/motions/{motion_id}", headers=auth_headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["generated_text"] is None
+
+
 async def test_invalid_payload_is_4xx_not_500(client: AsyncClient, auth_headers: dict):
     resp = await client.post(
         "/api/v1/violations/process",

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircleIcon, ClipboardDocumentIcon } from '@heroicons/react/20/solid';
+import { CorrectionsList, Correction } from '../shared/CorrectionsList';
 
 interface Form {
   id: string;
@@ -29,6 +30,7 @@ interface ViolationFilingResult {
   timeline: string;
   forms: Form[];
   declaration: string;
+  corrections?: Correction[];
   courthouse: Courthouse;
   instructions: string[];
   filingFee: string;
@@ -142,6 +144,9 @@ export const ViolationIntakeResult: React.FC<ViolationIntakeResultProps> = ({
           Filing fee: {result.filingFee} (fee waivers available — ask the clerk for Form FW-001)
         </p>
       </div>
+
+      {/* Fact-check corrections — review before relying on the declaration */}
+      {result.corrections && <CorrectionsList corrections={result.corrections} />}
 
       {/* Declaration */}
       <div className="bg-white shadow rounded-lg p-6">

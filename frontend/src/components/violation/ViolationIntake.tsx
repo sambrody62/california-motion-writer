@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { ChevronLeftIcon, ChevronRightIcon, CheckIcon } from '@heroicons/react/20/solid';
 import { violationAPI, ViolationIntakePayload } from '../../services/api';
 import { ViolationIntakeResult } from './ViolationIntakeResult';
+import { Correction } from '../shared/CorrectionsList';
 import { QuestionField, Question } from './ViolationQuestionField';
 
 // ---------- Types ----------
@@ -28,6 +29,7 @@ export interface FilingResult {
   timeline: string;
   forms: any[];
   declaration: string;
+  corrections?: Correction[];
   courthouse: { name: string; address: string; phone?: string };
   instructions: string[];
   filingFee: string;

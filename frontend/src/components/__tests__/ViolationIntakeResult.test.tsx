@@ -149,4 +149,59 @@ describe('ViolationIntake result screen', () => {
       );
     });
   });
+
+  // POST /violations/process responses gain a top-level `corrections` list
+  // (fact gate, real-LLM findings L4/L7). Same unwrapped correction shape as
+  // motions' fact_check.corrections.
+  const MOCK_CORRECTIONS = [
+    {
+      type: 'date',
+      severity: 'corrected',
+      section: 'Declaration',
+      original: 'June 22',
+      replacement: null,
+      message: 'We removed a June 22 date you did not enter.',
+    },
+    {
+      type: 'quantifier_flag',
+      severity: 'needs_review',
+      section: 'Declaration',
+      original: 'multiple occasions',
+      replacement: null,
+      message: 'The draft says "multiple" call attempts — confirm this matches what happened.',
+    },
+  ];
+
+  test('renders corrections above the declaration when the process response includes them', async () => {
+    mockProcess.mockResolvedValue({ ...MOCK_PROCESS_RESULT, corrections: MOCK_CORRECTIONS });
+
+    await advanceToResult();
+
+    expect(screen.getByText(/We corrected or flagged 2 details/i)).toBeInTheDocument();
+    expect(screen.getByText(/We removed a June 22 date you did not enter/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/confirm this matches what happened/i)
+    ).toBeInTheDocument();
+
+    // The corrections banner precedes the declaration draft in the document
+    const banner = screen.getByText(/We corrected or flagged 2 details/i);
+    const declarationHeading = screen.getByRole('heading', { name: /Declaration Draft/i });
+    expect(
+      banner.compareDocumentPosition(declarationHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  test('no corrections banner when the response has an empty corrections list', async () => {
+    mockProcess.mockResolvedValue({ ...MOCK_PROCESS_RESULT, corrections: [] });
+
+    await advanceToResult();
+
+    expect(screen.queryByText(/We corrected or flagged/i)).not.toBeInTheDocument();
+  });
+
+  test('no corrections banner when the response has no corrections field', async () => {
+    await advanceToResult();
+
+    expect(screen.queryByText(/We corrected or flagged/i)).not.toBeInTheDocument();
+  });
 });

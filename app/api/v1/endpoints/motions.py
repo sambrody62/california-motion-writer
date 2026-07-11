@@ -157,6 +157,7 @@ async def get_motion(
     detail = _motion_to_response(motion, await _user_case_number(current_user, db)).model_dump()
     detail["case_caption"] = motion.case_caption
     detail["generated_text"] = motion.generated_text
+    detail["fact_check"] = motion.fact_check
     detail["drafts"] = [
         {
             "step_number": d.step_number,

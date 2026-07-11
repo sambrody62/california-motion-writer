@@ -273,3 +273,11 @@ favicon/logo192/logo512 (SVG→qlmanage→PNG-in-ICO), manifest + theme-color #1
 Verified: 208 frontend tests pass, prod build clean (pre-existing lint warnings only),
 headless-Chrome visual QA of login page. Note: types/forms.ts color field is dead data
 (nothing consumes it). Remaining spec steps: 4 (Quick Exit hardening), 5 (microcopy pass).
+
+### Rename to Family Court Helper (DONE 2026-07-10)
+User's final call after 3-round naming exercise (Camino was recommended runner-up;
+CourtReady/Court Compass/Poppy/Kidside/StrongSuit etc. all collision-burned).
+feat(brand) commit: Dashboard header, LegalFooter/Terms/Privacy, index.html title,
+manifest (Family Court Helper / Court Helper), F monogram icons, README + design docs,
+3 test assertions. 208 tests pass, build clean.
+ACTION REQUIRED (user): register familycourthelper.com — verified UNREGISTERED 2026-07-10.

@@ -4,6 +4,7 @@ import { motionAPI, documentAPI, evidenceAPI, profileAPI } from '../../services/
 import { DocumentTextIcon, ArrowDownTrayIcon, PencilIcon } from '@heroicons/react/20/solid';
 import { format } from 'date-fns';
 import { MotionPreviewBanners } from './MotionPreviewBanners';
+import { MotionPreviewDeclaration } from './MotionPreviewDeclaration';
 import { FilingChecklist } from './FilingChecklist';
 
 interface MotionDraft {
@@ -23,6 +24,7 @@ interface Motion {
   hearing_date: string;
   hearing_time: string;
   status: string;
+  generated_text?: string | null;
 }
 
 interface LocationState {
@@ -193,6 +195,9 @@ export const MotionPreview: React.FC = () => {
 
         {/* Motion Sections */}
         <div className="space-y-6">
+          {drafts.length === 0 && motion?.generated_text && (
+            <MotionPreviewDeclaration text={motion.generated_text} />
+          )}
           {drafts.map((draft) => (
             <div key={draft.step_number} className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">

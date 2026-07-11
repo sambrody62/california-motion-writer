@@ -216,6 +216,42 @@ describe('MotionPreview', () => {
     expect(screen.queryByText(/rewritten in proper legal format/i)).not.toBeInTheDocument();
   });
 
+  test('shows the declaration when a motion has generated_text and no drafts', async () => {
+    // Regression for real-LLM finding L14: violation motions store the
+    // declaration on generated_text with no drafts — preview showed nothing.
+    mockGetMotion.mockResolvedValue({
+      ...mockMotion,
+      motion_type: 'VIOLATION',
+      generated_text: 'I, Rosa Martinez, declare that the order was violated.',
+    });
+    mockGetDrafts.mockResolvedValue([]);
+
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /declaration/i })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('I, Rosa Martinez, declare that the order was violated.')
+    ).toBeInTheDocument();
+  });
+
+  test('does not show the declaration card when drafts exist', async () => {
+    mockGetMotion.mockResolvedValue({
+      ...mockMotion,
+      generated_text: 'Stale declaration text',
+    });
+
+    renderWithRouter(<MotionPreview />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smith v. Smith')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('heading', { name: /declaration/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Stale declaration text')).not.toBeInTheDocument();
+  });
+
   test('shows the filing checklist only after the PDF is downloaded', async () => {
     renderWithRouter(<MotionPreview />);
 

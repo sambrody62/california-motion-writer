@@ -5,6 +5,11 @@ Only paths listed in RATE_LIMITS are enforced (all static). Storage is
 in-memory per process unless Redis is configured — with 2 uvicorn workers
 the effective limit is up to 2x the configured value, acceptable for MVP.
 RATE_LIMIT_ENABLED=false disables enforcement (used by the test suite).
+
+Implemented as pure ASGI middleware (not BaseHTTPMiddleware): the original
+receive channel is passed through untouched so downstream
+request.is_disconnected() sees real http.disconnect events, letting the
+process-motion abort hook stop paid LLM calls when the client goes away.
 """
 from typing import Optional
 from datetime import datetime, timedelta
@@ -13,6 +18,7 @@ from collections import defaultdict
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi.util import get_remote_address
+from starlette.types import ASGIApp, Receive, Scope, Send
 import logging
 import os
 
@@ -31,7 +37,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class RateLimiterMiddleware(UsageQuotaMixin):
+class RateLimiter(UsageQuotaMixin):
     """Rate limiting with token quotas and cost control"""
 
     def __init__(
@@ -168,25 +174,40 @@ class RateLimiterMiddleware(UsageQuotaMixin):
         return True, 0
 
 
-# Create middleware instance
-rate_limiter = RateLimiterMiddleware()
+# Create shared limiter instance
+rate_limiter = RateLimiter()
 
 
-async def rate_limit_middleware(request: Request, call_next):
-    """FastAPI middleware enforcing RATE_LIMITS on expensive routes"""
-    enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
-    if not enabled or request.url.path not in RATE_LIMITS:
-        return await call_next(request)
+class RateLimiterMiddleware:
+    """Pure ASGI middleware enforcing RATE_LIMITS on expensive routes"""
 
-    allowed, retry_after = await rate_limiter.check_rate_limit(request, request.url.path)
-    if not allowed:
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": "Rate limit exceeded",
-                "message": "Too many requests. Please try again later."
-            },
-            headers={"Retry-After": str(retry_after)}
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+        path = scope["path"]
+        if not enabled or path not in RATE_LIMITS:
+            await self.app(scope, receive, send)
+            return
+
+        allowed, retry_after = await rate_limiter.check_rate_limit(
+            Request(scope), path
         )
+        if not allowed:
+            response = JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Rate limit exceeded",
+                    "message": "Too many requests. Please try again later."
+                },
+                headers={"Retry-After": str(retry_after)}
+            )
+            await response(scope, receive, send)
+            return
 
-    return await call_next(request)
+        await self.app(scope, receive, send)

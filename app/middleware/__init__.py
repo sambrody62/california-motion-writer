@@ -1,5 +1,5 @@
 """Middleware package"""
 from .rate_limit_config import get_token_limit
-from .rate_limiter import rate_limiter, rate_limit_middleware
+from .rate_limiter import rate_limiter, RateLimiterMiddleware
 
-__all__ = ["rate_limiter", "rate_limit_middleware", "get_token_limit"]
+__all__ = ["rate_limiter", "RateLimiterMiddleware", "get_token_limit"]

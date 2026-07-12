@@ -10,7 +10,7 @@ import os
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import Base, db, init_db
-from app.middleware.rate_limiter import rate_limit_middleware
+from app.middleware.rate_limiter import RateLimiterMiddleware
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -52,8 +52,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate limiting on expensive routes (LLM, PDF, auth) — see RATE_LIMITS
-app.middleware("http")(rate_limit_middleware)
+# Rate limiting on expensive routes (LLM, PDF, auth) — see RATE_LIMITS.
+# Pure ASGI so client disconnects reach endpoints; added after CORSMiddleware
+# to keep it outermost (add_middleware is LIFO), matching the previous
+# @app.middleware("http") position in the stack.
+app.add_middleware(RateLimiterMiddleware)
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")

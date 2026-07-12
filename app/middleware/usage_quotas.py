@@ -1,5 +1,5 @@
 """
-Per-user token/request quota tracking (mixin for RateLimiterMiddleware).
+Per-user token/request quota tracking (mixin for RateLimiter).
 
 Currently unconsumed by any route — kept for the planned quota rollout.
 """

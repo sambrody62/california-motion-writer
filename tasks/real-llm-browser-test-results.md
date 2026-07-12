@@ -322,10 +322,12 @@ vanished for every user with children. Both fixed TDD-first; the tests now call 
 the real condition evaluator, closing the always-true-stub gap that let it ship.
 
 **Honest gaps / deferred (tracked):**
-- **L18 is inert in production**: live check proved a real client disconnect does NOT
-  propagate through the BaseHTTPMiddleware rate limiter to `request.is_disconnected()` —
-  the abort hook + tests are in place but won't fire until the rate limiter becomes pure
-  ASGI middleware (deferred ticket).
+- **L18 — RESOLVED 2026-07-11**: rate limiter converted to pure ASGI middleware
+  (branch fix/asgi-rate-limiter, commit 481c0ae; 522 backend tests). Live re-check:
+  curl-aborted client at 2s → LLM section loop stopped after **1 call (was 3)** —
+  disconnects now propagate and abandoned runs stop burning tokens. Noted pre-existing:
+  429s sit outside CORS (cross-origin browsers can't read Retry-After) and Redis mode
+  is dead code — both unchanged.
 - Possible third regression manifestation on *resume*: drafts store raw submit data, so
   `resumeAnswers` (useMotionInit merge) could re-poison conditions in a resumed session —
   flagged, not yet reproduced.

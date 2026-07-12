@@ -326,10 +326,11 @@ Backend 520 passed/3 xfailed (+122), frontend 252 passed/36 suites (+44), build 
 - Verification caught what suites couldn't: the C3 reorder regressed cross-step conditional
   questions (blank re-registration shadowing/poisoning allAnswers) — fixed in 29f2da8 +
   2084eb5 with the evaluator-stub test gap closed.
-- Deferred (tracked in report addendum): rate limiter → pure ASGI (disconnect abort inert
-  behind BaseHTTPMiddleware — verified live), resumeAnswers re-poisoning on resume,
+- Deferred (tracked in report addendum): resumeAnswers re-poisoning on resume,
   party-block templating, structured-JSON gameplan, ex-parte alias, progress staging,
-  Dashboard badge key.
+  Dashboard badge key. RESOLVED same day: rate limiter → pure ASGI (fix/asgi-rate-limiter,
+  481c0ae) — live re-check shows the LLM loop stops after 1 section call on client
+  disconnect (was 3); PR #5 (all L1-L19 work) merged to main.
 
 ### Rename to Family Court Helper (DONE 2026-07-10)
 User's final call after 3-round naming exercise (Camino was recommended runner-up;

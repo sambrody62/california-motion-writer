@@ -3,8 +3,12 @@ Rate limits must actually be enforced on expensive routes (LLM, PDF, auth).
 """
 import pytest
 from httpx import AsyncClient
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
-from app.middleware.rate_limiter import rate_limiter
+from app.main import app
+from app.middleware.rate_limiter import RateLimiterMiddleware, rate_limiter
 
 pytestmark = pytest.mark.asyncio
 
@@ -76,6 +80,43 @@ async def test_unlisted_paths_are_not_throttled(client: AsyncClient, rate_limits
     for _ in range(30):
         resp = await client.get("/health")
         assert resp.status_code == 200
+
+
+async def test_rate_limiter_registered_as_pure_asgi_middleware():
+    # BaseHTTPMiddleware wraps the receive channel so http.disconnect never
+    # reaches endpoints — the limiter must sit in the stack as a raw ASGI class
+    stack_classes = [m.cls for m in app.user_middleware]
+    assert RateLimiterMiddleware in stack_classes
+    assert BaseHTTPMiddleware not in stack_classes
+
+
+async def test_disconnect_reaches_downstream_through_middleware():
+    # The original receive must pass through untouched so a downstream
+    # request.is_disconnected() sees the real http.disconnect event
+    seen = {}
+
+    async def inner_app(scope, receive, send):
+        seen["disconnected"] = await Request(scope, receive).is_disconnected()
+        await PlainTextResponse("ok")(scope, receive, send)
+
+    events = [{"type": "http.disconnect"}]
+
+    async def receive():
+        return events.pop(0)
+
+    async def send(message):
+        pass
+
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": "/health",  # unlisted path — middleware passes through
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+    }
+    await RateLimiterMiddleware(inner_app)(scope, receive, send)
+
+    assert seen["disconnected"] is True
 
 
 async def test_kill_switch_disables_limits(

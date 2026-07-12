@@ -1,0 +1,46 @@
+# Render Blueprint — California Motion Writer backend
+# Connect this repo at https://dashboard.render.com → New → Blueprint.
+# Values marked sync: false are secrets you paste in the Render dashboard.
+services:
+  - type: web
+    name: california-motion-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: USE_GCP
+        value: "false"
+      - key: USE_MOCK_LLM
+        value: "false"
+      - key: USE_CLAUDE
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        # Supabase → Project Settings → Database → Connection string (URI, port 5432 direct)
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: DB_MAX_OVERFLOW
+        value: "5"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_EVIDENCE_BUCKET
+        value: evidence
+      - key: CORS_ORIGINS
+        # Set to your Vercel domain(s) after the first Vercel deploy,
+        # e.g. https://california-motion-writer.vercel.app
+        sync: false
+      # v1.1 adapters stay off until Google verification completes
+      - key: GMAIL_EVIDENCE_ENABLED
+        value: "false"
+      - key: OCR_ENABLED
+        value: "false"

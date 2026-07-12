@@ -1,7 +1,7 @@
 """
 LLM integration endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.models.motion import Motion, MotionDraft
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
+from app.services.fact_gate import GateContext, run_fact_gate
 from app.services.llm_service import llm_service
 
 router = APIRouter()
@@ -41,6 +42,30 @@ class ProcessMotionResponse(BaseModel):
     sections_processed: int
     total_tokens: int
     errors: List[str] = []
+    corrections: List[Dict[str, Any]] = []
+
+
+def _gate_context(motion: Motion, drafts, profile_data: Dict[str, Any]) -> GateContext:
+    """One ground-truth context for gating every section (findings L1-L4, L7)."""
+    intake_values: Dict[str, Any] = {}
+    for draft in drafts:
+        if isinstance(draft.question_data, dict):
+            intake_values.update(draft.question_data)
+    motion_type = (
+        motion.motion_type.value
+        if hasattr(motion.motion_type, "value")
+        else str(motion.motion_type)
+    )
+    return GateContext(
+        motion_kind="response_section" if motion_type in ("RESPONSE", "FL-320") else "rfo_section",
+        party_name=profile_data.get("party_name") or "",
+        other_party_name=profile_data.get("other_party_name") or "",
+        is_petitioner=bool(profile_data.get("is_petitioner", True)),
+        case_number=profile_data.get("case_number") or "",
+        county=profile_data.get("county") or "",
+        children=profile_data.get("children_info") or [],
+        intake_values=intake_values,
+    )
 
 class DeclarationRequest(BaseModel):
     narrative: str
@@ -86,6 +111,7 @@ async def rewrite_text(
 @router.post("/process-motion", response_model=ProcessMotionResponse)
 async def process_complete_motion(
     request: ProcessMotionRequest,
+    http_request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -151,19 +177,25 @@ async def process_complete_motion(
         result = await llm_service.process_complete_motion(
             motion_type=motion.motion_type,
             all_drafts=draft_data,
-            profile_data=profile_data
+            profile_data=profile_data,
+            should_abort=http_request.is_disconnected
         )
         
-        # Update drafts with LLM output
+        # Gate each rewritten section against user-entered facts, then save
+        gate_ctx = _gate_context(motion, drafts, profile_data)
+        corrections: List[Dict[str, Any]] = []
         errors = []
         sections_processed = 0
-        
+
         for section in result.get("sections", []):
             if section.get("success"):
                 # Find and update the corresponding draft
                 for draft in drafts:
                     if draft.step_number == section.get("step_number"):
-                        draft.llm_output = section.get("rewritten_text")
+                        gate_ctx.section_name = section.get("section") or ""
+                        gated = run_fact_gate(section.get("rewritten_text"), gate_ctx)
+                        draft.llm_output = gated.text
+                        corrections.extend(c.as_dict() for c in gated.corrections)
                         draft.llm_model = result.get("model")
                         draft.llm_tokens_used = section.get("tokens_used", 0)
                         draft.is_complete = True
@@ -171,19 +203,22 @@ async def process_complete_motion(
                         break
             else:
                 errors.append(f"Section {section.get('section')}: {section.get('error')}")
-        
+
+        motion.fact_check = {"version": 1, "corrections": corrections}
+
         # Update motion status if all sections processed
         if sections_processed == len(drafts):
             motion.status = "ready_for_review"
-        
+
         await db.commit()
-        
+
         return ProcessMotionResponse(
             motion_id=request.motion_id,
             success=result.get("success", False),
             sections_processed=sections_processed,
             total_tokens=result.get("total_tokens", 0),
-            errors=errors
+            errors=errors,
+            corrections=corrections
         )
         
     except HTTPException:

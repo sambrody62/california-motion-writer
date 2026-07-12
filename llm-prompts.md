@@ -38,8 +38,8 @@ Instructions:
 2. Organize into clear, numbered paragraphs
 3. Start each factual assertion with specific dates when possible
 4. Use "Petitioner/Respondent" not "I/me" (except in declarations)
-5. Include relevant California Family Code sections where appropriate
-6. Ensure compliance with local rules for {county} County
+5. Do NOT cite any statute, rule of court, case, or courthouse address. Do NOT reference other forms or filing fees.
+6. Output plain text only — no markdown, no tables, no HTML entities
 7. Maintain professional, neutral tone
 8. Focus on best interests of children (if applicable)
 9. Keep within {max_words} words

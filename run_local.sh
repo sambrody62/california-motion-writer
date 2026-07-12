@@ -81,12 +81,11 @@ fi
 echo ""
 echo "🎯 Starting FastAPI application..."
 echo "======================================================="
-echo "📍 Local URL: http://localhost:8080"
-echo "📚 API Docs: http://localhost:8080/docs"
-echo "🏠 Homepage: http://localhost:8080"
+echo "📍 Local URL: http://localhost:8000"
+echo "📚 API Docs: http://localhost:8000/docs"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo "======================================================="
 
-# Run with auto-reload for development
-python main.py
+# Run with auto-reload for development (frontend/.env points at port 8000)
+USE_GCP=false uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

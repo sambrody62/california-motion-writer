@@ -33,7 +33,11 @@ class IntakeService:
         # Simple condition evaluation
         # Examples: "has_existing_case == true", "relief_categories.includes('custody')"
         try:
-            if ".includes(" in condition:
+            if "||" in condition:
+                # OR must split first — sub-conditions may themselves contain includes()
+                sub_conditions = condition.split("||")
+                return any(self.evaluate_condition(sub.strip(), answers) for sub in sub_conditions)
+            elif ".includes(" in condition:
                 # Handle array includes condition
                 parts = condition.split(".includes(")
                 field_name = parts[0]
@@ -54,11 +58,7 @@ class IntakeService:
                     expected_value = False
                     
                 return str(actual_value).lower() == str(expected_value).lower()
-            elif "||" in condition:
-                # Handle OR conditions
-                sub_conditions = condition.split("||")
-                return any(self.evaluate_condition(sub.strip(), answers) for sub in sub_conditions)
-            
+
             return True
         except:
             # If condition evaluation fails, show the question/step

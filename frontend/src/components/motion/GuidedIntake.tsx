@@ -125,7 +125,15 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const evaluateConditionalQuestions = async () => {
     if (!stepData) return;
     const visible: Question[] = [];
-    const context = { ...resumeAnswers, ...allAnswers, ...watchedValues };
+    // Drop blank transient values: after a step change, the previous step's
+    // fields re-register empty around the draft reset, and a blank
+    // has_children must not shadow the real answer accumulated in allAnswers
+    const answeredValues = Object.fromEntries(
+      Object.entries(watchedValues).filter(
+        ([, value]) => value !== undefined && value !== null && value !== ''
+      )
+    );
+    const context = { ...resumeAnswers, ...allAnswers, ...answeredValues };
 
     for (const question of stepData.questions) {
       if (!question.condition) {

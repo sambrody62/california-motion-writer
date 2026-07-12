@@ -39,3 +39,31 @@
 - Under Jest, react-router-dom v7 only exposes `BrowserRouter`/`Router`; `MemoryRouter` is undefined. Use `BrowserRouter` + `window.history.pushState` for route-dependent tests (existing pattern in Dashboard.test.tsx).
 - Jest's babel transform accepts JSX the production build rejects (e.g. `unknown && <jsx>` children → TS2746). Run `npm run build` before finishing any component extraction.
 - Backend evidence upload form field `tags` expects a JSON array string ('["threat"]'), not a bare tag name.
+
+## 2026-07-11 — real-LLM browser test + fix pass (fix/real-llm-findings)
+- **The envelope-mock disease recurred a third time**: ViolationIntake's Jest mock encoded
+  a stepped question shape the real API never returned, so the suite was green while
+  #/violation/intake crashed for every user. Rule: any Jest mock of an API response must be
+  generated from (or verified byte-exact against) the real endpoint output, not written
+  from the component's expectations. When a mock and a component agree but production
+  crashes, the mock is the lie.
+- **Prompts can contradict guardrails**: UPL_GUARDRAILS said "NEVER invent facts" while the
+  rewrite prompt itself instructed "Include relevant California Family Code sections where
+  appropriate" — the LLM obeyed the specific instruction over the general prohibition and
+  fabricated statutes/local rules/case law. Audit prompt instructions against guardrails as
+  a pair; the most specific instruction wins.
+- **LLM output that must be factually faithful needs a deterministic post-generation gate,
+  not just prompt hardening** — real-Claude output fabricated party roles, ages, and a
+  support amount despite explicit "never invent facts" prompt language. Validate against
+  the source-of-truth data (intake/profile) in code.
+- **Mock-LLM green ≠ real-LLM safe**: every flow passed the mock pass; the first real-LLM
+  browser run produced 4 critical fabrication classes. Anything user-facing that renders
+  LLM output needs at least one live-model verification before launch.
+- **`request.is_disconnected()` does not fire behind BaseHTTPMiddleware** (verified live):
+  a curl-aborted client left the 6-section LLM loop running to completion. The
+  `should_abort` hook is in place but inert until the rate limiter becomes pure ASGI
+  middleware (deferred ticket).
+- **Subagent sandboxes may allowlist only exact command forms** (full-suite
+  `./venv/bin/python -m pytest tests/ -q` allowed; targeted single-file pytest denied).
+  When an agent reports blanket Bash denial, check whether the exact approved invocation
+  still works before assuming total loss.

@@ -283,6 +283,61 @@ store `generated_text`, no drafts); PDF download works (8 pages) but leaks raw M
   (`os.getenv` at import in `llm_service.py`), so an un-exported shell boots the mock
   silently even with `USE_CLAUDE=true` in `.env`.
 
+## Fix addendum (2026-07-11)
+
+All 19 findings fixed TDD-first on `fix/real-llm-findings` (30 commits: 1 docs, 27 planned
+A1–A3/B1–B13/C1–C11, 2 regression fixes). Suites: backend **520 passed / 3 xfailed**
+(+122 new), frontend **252 passed / 36 suites** (+44 new), `npm run build` clean.
+Plan: ~/.claude/plans/plan-the-fixes-then-jolly-fiddle.md.
+
+Centerpiece: **`app/services/fact_gate/`** — a deterministic post-generation gate (markdown
+strip → authority strip → placeholder fill → party-role correction → amount/date/age
+verification → flag-only UPL/quantifier scan) run on every RFO/FL-320 section and violation
+declaration before DB write, with corrections persisted to a new `motions.fact_check` JSON
+column (idempotent schema upgrade — no alembic) and surfaced to users as an amber
+"We corrected or flagged N details" banner (motion preview + violation result). The prompts
+that actively *caused* citation fabrication (llm_service instruction #5 "Include relevant
+California Family Code sections", #6 local-rules compliance) were removed and replaced with
+a no-authority redline plus per-motion party/fact anchor blocks.
+
+**Live re-verification (real Claude, browser-driven): 4/4 checks pass.**
+- RFO: ages rendered 8/5 matching DOBs (was 6/4), no party-role swap, the $3,200 income
+  never became a support demand, zero invented statutes/addresses, zero markdown on the
+  PDF, corrections banner shown, **PDF page 1 is FL-300 REQUEST FOR ORDER** (was FL-320);
+  1 motion created per entry (was 2); step-1 profile prefill populates (was empty).
+- Violation: #/violation/intake loads and completes (was a blank crash for every user);
+  declaration uses real profile names (no "[PETITIONER'S FULL LEGAL NAME]"), no statute
+  cites, no invented date ranges; corrections listed; preview shows the declaration.
+- Gameplan: exactly 1 chat call per submit (was 2 paid); honest fallback instead of the
+  echoed prompt fragment; form-execution completion registers (all-complete screen).
+- FL-320: extraction names Maria Delgado as petitioner (was Jacob), drops unevidenced
+  children's ages (no fabricated "age 3"), extracted requests land in step 2 (was wiped),
+  deadline banner exactly matches independent computation (Thu Jul 23, 2026).
+
+**Verification caught a regression the suites couldn't**: the C3 prefill reorder made
+`reset()` re-register the previous step's fields as blanks, which shadowed (29f2da8) and
+then poisoned via submit-spread (2084eb5) the accumulated answers used for cross-step
+conditional questions — step 4's child-support radio and step 5's best-interest textarea
+vanished for every user with children. Both fixed TDD-first; the tests now call through to
+the real condition evaluator, closing the always-true-stub gap that let it ship.
+
+**Honest gaps / deferred (tracked):**
+- **L18 is inert in production**: live check proved a real client disconnect does NOT
+  propagate through the BaseHTTPMiddleware rate limiter to `request.is_disconnected()` —
+  the abort hook + tests are in place but won't fire until the rate limiter becomes pure
+  ASGI middleware (deferred ticket).
+- Possible third regression manifestation on *resume*: drafts store raw submit data, so
+  `resumeAnswers` (useMotionInit merge) could re-poison conditions in a resumed session —
+  flagged, not yet reproduced.
+- Deferred from the plan: templating the party-ID block out of the LLM (durable L1 fix),
+  backend structured-JSON gameplan (durable L10 fix), ex-parte route alias, 129s progress
+  staging, Dashboard 'complete'/'completed' badge key, authority-strip husk sentences.
+- Gameplan live run took the honest-fallback path — real personalized analysis quality
+  remains unassessed (blocked on the structured-JSON gameplan work).
+
+Verification artifacts: /tmp/real-llm-browser-test/artifacts/verify-* (screenshots,
+verify-final.json, gated FL-300 PDF + text dumps). Re-run cost: ~7 upstream Claude calls.
+
 ## Out of scope (unchanged)
 OCR and Gmail import remain untested — feature flags off pending Google OAuth
 verification (launch blocker #1). Real-LLM evidence ranking / screenshot threading /

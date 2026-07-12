@@ -311,6 +311,26 @@ otherwise court-appropriate prose. Launch gate: post-generation fact-check again
 data + strip uninvited legal authority + markdown rendering. Cost: 28 upstream Claude
 calls, well under $1.
 
+### Fix pass review (2026-07-11, branch fix/real-llm-findings)
+All L1–L19 fixed TDD-first: 30 commits (27 planned + 2 regression fixes + docs).
+Backend 520 passed/3 xfailed (+122), frontend 252 passed/36 suites (+44), build clean.
+- fact_gate package (deterministic: markdown/authority strip, placeholder fill, party-role
+  correction, amount/date/age verification vs intake+profile, flag-only UPL/quantifiers)
+  gates every RFO/FL-320 section + violation declaration before save; corrections persist
+  in motions.fact_check (idempotent schema upgrade) and render as an amber review banner.
+- Prompt root cause removed: llm_service instruction #5 told the LLM to "Include relevant
+  California Family Code sections" — deleted; party/fact anchors added.
+- Live re-verification (real Claude, browser): 4/4 checks pass — ages/roles/amounts clean,
+  FL-300 form correct, violation flow usable end-to-end, 1 chat call per gameplan submit,
+  extraction drops unevidenced ages, prefill lands, deadline math exact.
+- Verification caught what suites couldn't: the C3 reorder regressed cross-step conditional
+  questions (blank re-registration shadowing/poisoning allAnswers) — fixed in 29f2da8 +
+  2084eb5 with the evaluator-stub test gap closed.
+- Deferred (tracked in report addendum): rate limiter → pure ASGI (disconnect abort inert
+  behind BaseHTTPMiddleware — verified live), resumeAnswers re-poisoning on resume,
+  party-block templating, structured-JSON gameplan, ex-parte alias, progress staging,
+  Dashboard badge key.
+
 ### Rename to Family Court Helper (DONE 2026-07-10)
 User's final call after 3-round naming exercise (Camino was recommended runner-up;
 CourtReady/Court Compass/Poppy/Kidside/StrongSuit etc. all collision-burned).

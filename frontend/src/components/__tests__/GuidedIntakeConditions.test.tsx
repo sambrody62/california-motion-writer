@@ -2,8 +2,10 @@
  * Cross-step conditional questions: an answer saved on an earlier step must
  * still satisfy a later step's condition. Since 871cafa the draft reset fires
  * while the previous step's fields are still mounted, so they re-register
- * blank values that shadow the accumulated answers when the condition context
- * is built. Caught by real-LLM browser verification (FL-300 step 4).
+ * blank values that (a) shadow the accumulated answers when the condition
+ * context is built, and (b) ride along in handleSubmit's whole-store data and
+ * overwrite the real answer in allAnswers on the next submit. Caught by
+ * real-LLM browser verification (FL-300 steps 4 and 5).
  *
  * Unlike the other intake suites, evaluateCondition here calls through to the
  * REAL evaluator — an always-true stub cannot catch this bug.
@@ -52,7 +54,7 @@ const STEP_1_CHILDREN = {
       options: ['Yes', 'No'],
     },
   ],
-  total_steps: 2,
+  total_steps: 3,
 };
 
 const STEP_2_ORDERS = {
@@ -74,7 +76,29 @@ const STEP_2_ORDERS = {
       condition: 'has_children == "Yes"',
     },
   ],
-  total_steps: 2,
+  total_steps: 3,
+};
+
+const STEP_3_BEST_INTEREST = {
+  step_number: 3,
+  step_name: 'Best Interest',
+  description: 'Why your requests serve the children',
+  questions: [
+    {
+      id: 'requested_changes',
+      type: 'text',
+      label: 'What changes are you asking the court to make?',
+      required: true,
+    },
+    {
+      id: 'best_interest_children',
+      type: 'textarea',
+      label: 'Why are these orders in the best interest of the children?',
+      required: false,
+      condition: 'has_children == "Yes"',
+    },
+  ],
+  total_steps: 3,
 };
 
 const mockGetProfile = jest.fn();
@@ -144,6 +168,40 @@ const answerStep1AndAdvance = async (answer: 'Yes' | 'No') => {
   await act(async () => {});
 };
 
+// Submit step 2 and advance — the intervening submit spreads handleSubmit's
+// whole retained store into allAnswers, which is where the step-3 poisoning
+// happens. Same deferred-draft timing as the step-2 transition.
+const continueToStep3 = async (answer: 'Yes' | 'No') => {
+  const step3Drafts = deferred<any[]>();
+  mockGetDrafts.mockImplementation(() => step3Drafts.promise);
+
+  fireEvent.change(screen.getByLabelText(/Summarize the orders/i), {
+    target: { value: 'Update the visitation schedule.' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /next/i }));
+
+  await waitFor(() => expect(mockGetDrafts).toHaveBeenCalledTimes(3));
+  await act(async () => {});
+  await act(async () => {
+    step3Drafts.resolve([
+      {
+        step_number: 1,
+        step_name: 'About Your Children',
+        question_data: { has_children: answer },
+      },
+      {
+        step_number: 2,
+        step_name: 'Orders Requested',
+        question_data: { orders_summary: 'Update the visitation schedule.' },
+      },
+    ]);
+  });
+
+  await screen.findByText('Best Interest');
+  await screen.findByLabelText(/What changes are you asking/i);
+  await act(async () => {});
+};
+
 describe('GuidedIntake cross-step conditional questions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -153,7 +211,10 @@ describe('GuidedIntake cross-step conditional questions', () => {
     mockSaveDraft.mockResolvedValue({ success: true });
     mockProcessWithLLM.mockResolvedValue({ success: true });
     mockGetQuestions.mockImplementation((_formType: string, step?: number) =>
-      Promise.resolve({ data: step === 2 ? STEP_2_ORDERS : STEP_1_CHILDREN })
+      Promise.resolve({
+        data:
+          step === 3 ? STEP_3_BEST_INTEREST : step === 2 ? STEP_2_ORDERS : STEP_1_CHILDREN,
+      })
     );
     // Wire the mock through the real evaluator — a stub that always returns
     // true is exactly the test gap that let this regression ship
@@ -176,6 +237,24 @@ describe('GuidedIntake cross-step conditional questions', () => {
 
     expect(
       screen.queryByLabelText(/Are you requesting child support/i)
+    ).not.toBeInTheDocument();
+  });
+
+  test('a Yes answer survives an intervening submit — step-3 conditional renders', async () => {
+    await answerStep1AndAdvance('Yes');
+    await continueToStep3('Yes');
+
+    expect(
+      await screen.findByLabelText(/best interest of the children/i)
+    ).toBeInTheDocument();
+  });
+
+  test('a No answer keeps the step-3 conditional hidden after an intervening submit', async () => {
+    await answerStep1AndAdvance('No');
+    await continueToStep3('No');
+
+    expect(
+      screen.queryByLabelText(/best interest of the children/i)
     ).not.toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ import { ServedMotionUpload } from './ServedMotionUpload';
 import { ServedMotionExtracted } from '../../services/servedMotionApi';
 import { useMotionInit } from './useMotionInit';
 import { useIntakePrefill } from './useIntakePrefill';
+import { omitBlank } from './omitBlank';
 import { IntakeProgressBar, IntakeStepDots } from './IntakeProgress';
 import { IntakeStepForm } from './IntakeStepForm';
 import { IntakeNotices } from './IntakeNotices';
@@ -125,15 +126,9 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   const evaluateConditionalQuestions = async () => {
     if (!stepData) return;
     const visible: Question[] = [];
-    // Drop blank transient values: after a step change, the previous step's
-    // fields re-register empty around the draft reset, and a blank
-    // has_children must not shadow the real answer accumulated in allAnswers
-    const answeredValues = Object.fromEntries(
-      Object.entries(watchedValues).filter(
-        ([, value]) => value !== undefined && value !== null && value !== ''
-      )
-    );
-    const context = { ...resumeAnswers, ...allAnswers, ...answeredValues };
+    // Blank transient values (re-registered around the draft reset on a step
+    // change) must not shadow the real answers accumulated in allAnswers
+    const context = { ...resumeAnswers, ...allAnswers, ...omitBlank(watchedValues) };
 
     for (const question of stepData.questions) {
       if (!question.condition) {
@@ -166,7 +161,10 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
         step_name: stepData?.step_name || `step_${currentStep}`,
         question_data: data,
       });
-      setAllAnswers({ ...allAnswers, ...data });
+      // handleSubmit passes the ENTIRE retained store, including blanks the
+      // previous step's fields re-registered — filter them or they overwrite
+      // the real answers and poison every later step's condition context
+      setAllAnswers({ ...allAnswers, ...omitBlank(data) });
 
       if (currentStep < totalSteps) {
         setCurrentStep(currentStep + 1);

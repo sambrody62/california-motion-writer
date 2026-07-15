@@ -73,6 +73,38 @@ def excerpt(text: str, limit: int = EXCERPT_LIMIT) -> str:
     return text[: limit - 1].rstrip() + "…"
 
 
+def _is_blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
+def merge_intake_values(dicts: List[Any]) -> Dict[str, Any]:
+    """Merge per-step intake dicts in order, ignoring blank re-registrations.
+
+    The intake wizard saves each step with the raw form store, so later steps
+    re-register earlier fields as None/""/all-false (871cafa family). Blanks
+    never overwrite real answers; checkbox groups union their truthy leaves;
+    a genuine non-blank re-answer on a later step still wins.
+    """
+    merged: Dict[str, Any] = {}
+    for data in dicts:
+        if not isinstance(data, dict):
+            continue
+        for key, value in data.items():
+            if _is_blank(value):
+                continue
+            if isinstance(value, dict):
+                truthy = {k: v for k, v in value.items() if v}
+                if not truthy:
+                    continue
+                existing = merged.get(key)
+                merged[key] = (
+                    {**existing, **truthy} if isinstance(existing, dict) else truthy
+                )
+                continue
+            merged[key] = value
+    return merged
+
+
 def iter_scalars(value: Any, key: str = "") -> Iterator[Tuple[str, Any]]:
     """Yield (key, scalar) pairs from arbitrarily nested intake structures."""
     if isinstance(value, dict):

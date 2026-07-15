@@ -15,7 +15,7 @@ from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
 from app.services import semantic_check_service
-from app.services.fact_gate import GateContext, run_fact_gate
+from app.services.fact_gate import GateContext, merge_intake_values, run_fact_gate
 from app.services.llm_service import llm_service
 
 router = APIRouter()
@@ -48,10 +48,8 @@ class ProcessMotionResponse(BaseModel):
 
 def _gate_context(motion: Motion, drafts, profile_data: Dict[str, Any]) -> GateContext:
     """One ground-truth context for gating every section (findings L1-L4, L7)."""
-    intake_values: Dict[str, Any] = {}
-    for draft in drafts:
-        if isinstance(draft.question_data, dict):
-            intake_values.update(draft.question_data)
+    # Blank re-registrations from later steps must not erase earlier answers
+    intake_values = merge_intake_values([draft.question_data for draft in drafts])
     motion_type = (
         motion.motion_type.value
         if hasattr(motion.motion_type, "value")

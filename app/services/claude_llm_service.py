@@ -3,7 +3,7 @@ Claude backend for LLM operations (M2).
 
 Routes operations to the right model tier:
 - claude-haiku-4-5: chat, intent classification, UPL checks (high volume, low cost)
-- claude-sonnet-4-6: declaration/motion drafting (quality-sensitive legal writing)
+- claude-opus-4-8: declaration/motion drafting (quality-sensitive legal writing)
 
 The stable system prompt (base prompt + UPL guardrails) is cached via
 prompt caching; per-request content goes in the user message.
@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 CHAT_MODEL = os.getenv("CLAUDE_CHAT_MODEL", "claude-haiku-4-5")
-DRAFTING_MODEL = os.getenv("CLAUDE_DRAFTING_MODEL", "claude-sonnet-4-6")
+DRAFTING_MODEL = os.getenv("CLAUDE_DRAFTING_MODEL", "claude-opus-4-8")
 
 OPERATION_MODELS = {
     "chat_response": CHAT_MODEL,

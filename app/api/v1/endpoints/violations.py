@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.services import semantic_check_service
 from app.services.fact_gate import GateContext, run_fact_gate
 from app.services.violation_intake_steps import build_wizard_steps
 from app.services.violation_service import ViolationFilingService
@@ -128,6 +129,13 @@ async def process_violation_filing(
         )
         result["declaration"] = gated.text
         result["corrections"] = [c.as_dict() for c in gated.corrections]
+
+        # One semantic refute-pass over the gated declaration (flag-only, fail-open)
+        result["corrections"].extend(
+            await semantic_check_service.check_text(
+                gated.text, intake_data.dict(), profile_data or {}
+            )
+        )
 
         # Save to database as a motion
         motion = Motion(

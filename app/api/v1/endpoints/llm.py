@@ -14,6 +14,7 @@ from app.models.motion import Motion, MotionDraft
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
+from app.services import semantic_check_service
 from app.services.fact_gate import GateContext, run_fact_gate
 from app.services.llm_service import llm_service
 
@@ -184,6 +185,7 @@ async def process_complete_motion(
         # Gate each rewritten section against user-entered facts, then save
         gate_ctx = _gate_context(motion, drafts, profile_data)
         corrections: List[Dict[str, Any]] = []
+        gated_texts: List[str] = []
         errors = []
         sections_processed = 0
 
@@ -195,6 +197,7 @@ async def process_complete_motion(
                         gate_ctx.section_name = section.get("section") or ""
                         gated = run_fact_gate(section.get("rewritten_text"), gate_ctx)
                         draft.llm_output = gated.text
+                        gated_texts.append(gated.text)
                         corrections.extend(c.as_dict() for c in gated.corrections)
                         draft.llm_model = result.get("model")
                         draft.llm_tokens_used = section.get("tokens_used", 0)
@@ -203,6 +206,14 @@ async def process_complete_motion(
                         break
             else:
                 errors.append(f"Section {section.get('section')}: {section.get('error')}")
+
+        # One semantic refute-pass over the whole gated motion (flag-only, fail-open)
+        if gated_texts:
+            corrections.extend(
+                await semantic_check_service.check_text(
+                    "\n\n".join(gated_texts), gate_ctx.intake_values, profile_data
+                )
+            )
 
         motion.fact_check = {"version": 1, "corrections": corrections}
 

@@ -194,3 +194,56 @@ async def test_clean_text_is_untouched_with_empty_report(
     detail = await _get_detail(client, auth_headers, motion_id)
     assert detail["drafts"][0]["llm_output"] == CLEAN_TEXT
     assert detail["fact_check"] == {"version": 1, "corrections": []}
+
+
+SEMANTIC_FLAG = {
+    "type": "semantic_flag",
+    "severity": "needs_review",
+    "section": "reviewer",
+    "original": "the parties' work schedules",
+    "replacement": None,
+    "message": (
+        "Our automated reviewer flagged: The intake data does not mention work "
+        "schedules. — verify \"the parties' work schedules\" against your "
+        "records before filing."
+    ),
+}
+
+
+async def test_semantic_flags_append_to_report_and_response(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    motion_id = await _create_motion_with_drafts(
+        client,
+        auth_headers,
+        [
+            (1, "facts", {"facts": "The schedule needs adjusting."}),
+            (2, "relief_requested", {"relief": "Please adjust the schedule."}),
+        ],
+    )
+    monkeypatch.setattr(
+        llm_endpoint.llm_service,
+        "process_complete_motion",
+        AsyncMock(
+            return_value=_llm_result(
+                [(1, "facts", CLEAN_TEXT), (2, "relief_requested", CLEAN_TEXT)]
+            )
+        ),
+    )
+    check_text = AsyncMock(return_value=[dict(SEMANTIC_FLAG)])
+    monkeypatch.setattr(llm_endpoint.semantic_check_service, "check_text", check_text)
+
+    resp = await client.post(
+        "/api/v1/llm/process-motion", json={"motion_id": motion_id}, headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    # Clean text produces no gate corrections; the reviewer flag is appended
+    assert resp.json()["corrections"] == [SEMANTIC_FLAG]
+
+    # ONE reviewer call per motion, over the concatenated gated sections
+    check_text.assert_awaited_once()
+    merged_text = check_text.await_args.args[0]
+    assert merged_text.count(CLEAN_TEXT) == 2
+
+    detail = await _get_detail(client, auth_headers, motion_id)
+    assert detail["fact_check"] == {"version": 1, "corrections": [SEMANTIC_FLAG]}

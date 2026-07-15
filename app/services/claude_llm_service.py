@@ -32,6 +32,8 @@ OPERATION_MODELS = {
     "screenshot_reading": CHAT_MODEL,
     # Verbatim reproduction fidelity matters for citations — use the drafting tier
     "claim_citation": DRAFTING_MODEL,
+    # Adversarial refute-pass over drafted motions — needs drafting-tier judgment
+    "semantic_check": DRAFTING_MODEL,
 }
 
 # Mirrors the per-operation output limits used by the Vertex backend
@@ -48,6 +50,7 @@ OPERATION_MAX_TOKENS = {
     "conversation_threading": 6000,
     "screenshot_reading": 6000,
     "claim_citation": 6000,
+    "semantic_check": 1500,
 }
 
 # PRD compliance section C3: the line between legal information (allowed)

@@ -52,6 +52,10 @@ class TestOperationRouting:
         assert OPERATION_MAX_TOKENS["conversation_threading"] == 6000
         assert OPERATION_MAX_TOKENS["claim_citation"] == 6000
 
+    def test_semantic_check_uses_drafting_tier(self):
+        assert OPERATION_MODELS["semantic_check"] == DRAFTING_MODEL
+        assert OPERATION_MAX_TOKENS["semantic_check"] == 1500
+
     def test_default_model_ids(self):
         assert DRAFTING_MODEL == "claude-opus-4-8"
         assert CHAT_MODEL == "claude-haiku-4-5"

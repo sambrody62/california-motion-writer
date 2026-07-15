@@ -36,7 +36,7 @@ def _service_with_mock_client(text="Generated text"):
 
 
 class TestOperationRouting:
-    def test_drafting_operations_use_sonnet(self):
+    def test_drafting_operations_use_drafting_tier(self):
         for op in ("section_rewrite", "declaration", "best_interests", "complete_motion"):
             assert OPERATION_MODELS[op] == DRAFTING_MODEL
 
@@ -52,8 +52,12 @@ class TestOperationRouting:
         assert OPERATION_MAX_TOKENS["conversation_threading"] == 6000
         assert OPERATION_MAX_TOKENS["claim_citation"] == 6000
 
+    def test_semantic_check_uses_drafting_tier(self):
+        assert OPERATION_MODELS["semantic_check"] == DRAFTING_MODEL
+        assert OPERATION_MAX_TOKENS["semantic_check"] == 1500
+
     def test_default_model_ids(self):
-        assert DRAFTING_MODEL == "claude-sonnet-4-6"
+        assert DRAFTING_MODEL == "claude-opus-4-8"
         assert CHAT_MODEL == "claude-haiku-4-5"
 
     def test_max_tokens_match_existing_operation_limits(self):

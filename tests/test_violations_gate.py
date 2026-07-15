@@ -119,3 +119,53 @@ async def test_generate_declaration_returns_gated_text_and_corrections(
     assert "multiple occasions" in body["declaration"]
     types = {c["type"] for c in body["corrections"]}
     assert {"date", "authority_removed", "quantifier_flag"} <= types
+
+
+SEMANTIC_FLAG = {
+    "type": "semantic_flag",
+    "severity": "needs_review",
+    "section": "reviewer",
+    "original": "multiple occasions",
+    "replacement": None,
+    "message": (
+        "Our automated reviewer flagged: The intake data does not say how many "
+        'attempts were made. — verify "multiple occasions" against your '
+        "records before filing."
+    ),
+}
+
+
+async def test_process_appends_semantic_flags_to_report(
+    client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    await _create_profile(client, auth_headers)
+    _mock_enhance(monkeypatch)
+    check_text = AsyncMock(return_value=[dict(SEMANTIC_FLAG)])
+    monkeypatch.setattr(
+        violations_endpoint.semantic_check_service, "check_text", check_text
+    )
+
+    resp = await client.post(
+        "/api/v1/violations/process", json=_intake(), headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    # Reviewer flag appended after the gate's own corrections
+    assert body["corrections"][-1] == SEMANTIC_FLAG
+    assert {c["type"] for c in body["corrections"]} >= {
+        "authority_removed",
+        "semantic_flag",
+    }
+
+    # Reviewer sees the gated declaration, the raw intake, and the profile
+    check_text.assert_awaited_once()
+    args = check_text.await_args.args
+    assert args[0] == body["declaration"]
+    assert args[1]["violationType"] == "Visitation"
+    assert args[2]["party_name"] == "Rosa Martinez"
+
+    listing = await client.get("/api/v1/motions/", headers=auth_headers)
+    motion_id = [m for m in listing.json() if m["motion_type"] == "VIOLATION"][0]["id"]
+    detail = await client.get(f"/api/v1/motions/{motion_id}", headers=auth_headers)
+    assert detail.json()["fact_check"]["corrections"] == body["corrections"]

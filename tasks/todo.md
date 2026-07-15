@@ -1,5 +1,20 @@
 # Build Plan — Family Court Helper MVP (formerly California Motion Writer)
 
+## Model upgrade + LLM checker (2026-07-14, approved: Opus drafter + Opus checker, no Gemini)
+- [x] U1 feat(llm): drafting tier Sonnet 4.6 → Opus 4.8 (1ff81b6) — live-verified, drafts
+      carry claude-opus-4-8, ~54s per motion (comparable to Sonnet)
+- [x] U2 feat(llm): Opus semantic refute-pass (8e231b8) — one flag-only call per motion,
+      findings render in the existing corrections banner, fail-open. Haiku stays on utility.
+- [x] U3 Verified live twice. Run 1 exposed a REAL pre-existing bug the checker caught:
+      blank draft values poisoned the backend intake merge → the gate was stripping GENUINE
+      user facts ($3,200/$85/June 14) as unverifiable. Fixed in 9a83606 (merge_intake_values
+      ignores blank overwrites; verbatim live DB shapes as fixtures). Run 2: all real facts
+      survive in the PDF, checker flags now catch a real drafting quality issue (Opus writes
+      [TO BE COMPLETED] for provided case number/county). Backend 544 passed / 3 xfailed.
+      Follow-ups: dedup near-identical checker findings; extend gate placeholder-fill to
+      case_number/county; frontend per-step-only saveDraft payloads (upstream fix for the
+      draft-poisoning family).
+
 Source: PRD_COMPLETE.md + approved plan (Phase A-F).
 Build strategy: orchestrator (this session) + Sonnet subagents for implementation, Haiku for mechanical tasks.
 

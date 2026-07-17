@@ -10,6 +10,7 @@ from app.models.chat import (
     ConversationTemplate
 )
 from app.models.evidence import Evidence
+from app.models.subscription import Subscription
 
 __all__ = [
     'User',
@@ -20,4 +21,5 @@ __all__ = [
     'ChatIntent',
     'ConversationTemplate',
     'Evidence',
+    'Subscription',
 ]

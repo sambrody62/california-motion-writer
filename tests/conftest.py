@@ -31,6 +31,7 @@ from app.models.profile import Profile
 from app.models.motion import Motion
 from app.models.chat import ChatSession, ChatMessage
 from app.models.evidence import Evidence
+from app.models.subscription import Subscription
 
 from app.api.v1.endpoints.auth import get_password_hash
 

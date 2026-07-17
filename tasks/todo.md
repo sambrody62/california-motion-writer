@@ -1,5 +1,27 @@
 # Build Plan — Family Court Helper MVP (formerly California Motion Writer)
 
+## Stripe subscription billing (2026-07-17, approved plan: ~/.claude/plans/buzzing-nibbling-emerson.md)
+Decisions: $300 recurring every 3/6 months (interval set in Stripe dashboard via STRIPE_PRICE_ID);
+paywall gates LLM drafting + PDF export (intake/gameplan/evidence free); hosted Checkout + customer
+portal; 60-day money-back guarantee in offer copy (refunds manual via dashboard); guided-session
+booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billing.
+- [ ] S1 chore(billing): stripe~=15.3 dep, BILLING_ENABLED=false in conftest, this checklist
+- [ ] S2 feat(billing): Subscription model (app/models/subscription.py) + registrations
+- [ ] S3 feat(billing): config settings (STRIPE_* keys, FRONTEND_URL)
+- [ ] S4 feat(billing): 402 gate (app/core/entitlements.py) on llm.py router, documents.py
+      generate-pdf/-sync + /download, chat_pdf.py generate-pdf + complete-workflow
+- [ ] S5 feat(billing): stripe_service.py — customer/checkout/portal/verify + idempotent
+      webhook event application (last_event_created guard)
+- [ ] S6 feat(billing): billing endpoints (checkout-session, portal-session, status, verify-session)
+- [ ] S7 feat(billing): POST /webhooks/stripe with signature verification (unauthenticated)
+- [ ] S8 feat(billing): frontend billing.ts service + isPaywallError
+- [ ] S9 feat(billing): PaywallModal (offer copy incl. 60-day guarantee + session)
+- [ ] S10 feat(billing): GuidedIntake 402 → paywall modal, stop navigation
+- [ ] S11 feat(billing): MotionPreview PDF 402 → paywall modal
+- [ ] S12 feat(billing): BillingSuccess (verify + poll) / BillingCanceled / BillingButton +
+      routes + Dashboard entry; manual Stripe test-mode E2E
+
+
 ## Model upgrade + LLM checker (2026-07-14, approved: Opus drafter + Opus checker, no Gemini)
 - [x] U1 feat(llm): drafting tier Sonnet 4.6 → Opus 4.8 (1ff81b6) — live-verified, drafts
       carry claude-opus-4-8, ~54s per motion (comparable to Sonnet)

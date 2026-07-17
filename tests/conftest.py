@@ -16,6 +16,8 @@ os.environ["USE_MOCK_LLM"] = "true"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing"
 # Off by default: the shared-IP auth fixture would trip auth limits mid-suite
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Off by default: billing gate would 402 the existing LLM/PDF tests
+os.environ["BILLING_ENABLED"] = "false"
 
 # Add app to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -15,6 +15,9 @@ import { IntakeProgressBar, IntakeStepDots } from './IntakeProgress';
 import { IntakeStepForm } from './IntakeStepForm';
 import { IntakeNotices } from './IntakeNotices';
 import { IntakeErrorBanner } from './IntakeErrorBanner';
+import { navigateAfterIntake } from './intakeNavigation';
+import { isPaywallError } from '../../services/billing';
+import { PaywallModal } from '../billing/PaywallModal';
 
 interface GuidedIntakeProps {
   onComplete?: (motionId: string) => void;
@@ -45,6 +48,7 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
   // FL-320: skippable "upload the motion you were served" gate before step 1.
   // Resume skips it — the served motion was already handled on first entry.
   const [showUploadGate, setShowUploadGate] = useState(isResponseForm && !isResume);
+  const [showPaywall, setShowPaywall] = useState(false);
   // Track last visible question IDs to avoid infinite update loops from evaluateConditionalQuestions
   const visibleQuestionIdsRef = useRef<string>('');
 
@@ -178,31 +182,18 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
       try {
         await motionAPI.processWithLLM(motionId!);
       } catch (llmError) {
+        if (isPaywallError(llmError)) {
+          // Drafts are saved — after subscribing the user resumes this step
+          setShowPaywall(true);
+          return;
+        }
         console.error('LLM processing failed, proceeding with user words:', llmError);
         llmFailed = true;
       } finally {
         setProcessingLLM(false);
       }
 
-      if (onComplete) {
-        onComplete(motionId!);
-      }
-
-      // If launched from FormExecution, navigate back to signal completion.
-      // FormExecution is mounted at /case/forms — there is no /form/execution route.
-      if (locationState?.fromFormExecution) {
-        navigate('/case/forms', {
-          state: {
-            ...locationState,
-            completedFormIndex: locationState.formExecutionFormIndex,
-          },
-        });
-        return;
-      }
-
-      navigate(`/motion/${motionId}/preview`, {
-        state: { llmFailed },
-      });
+      navigateAfterIntake(navigate, motionId!, locationState, llmFailed, onComplete);
     } catch (error) {
       console.error('Failed to save step:', error);
       setSaveError(
@@ -293,6 +284,12 @@ export const GuidedIntake: React.FC<GuidedIntakeProps> = ({ onComplete }) => {
           currentStep={currentStep}
           totalSteps={totalSteps}
           onStepSelect={setCurrentStep}
+        />
+
+        <PaywallModal
+          isOpen={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          returnTo={`/motion/${motionId}/edit/${totalSteps}`}
         />
       </div>
     </div>

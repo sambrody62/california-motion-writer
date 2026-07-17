@@ -6,6 +6,9 @@ import { format } from 'date-fns';
 import { MotionPreviewBanners, FactCheck } from './MotionPreviewBanners';
 import { MotionPreviewDeclaration } from './MotionPreviewDeclaration';
 import { FilingChecklist } from './FilingChecklist';
+import { downloadBlob } from '../../utils/downloadBlob';
+import { isPaywallError } from '../../services/billing';
+import { PaywallModal } from '../billing/PaywallModal';
 
 interface MotionDraft {
   step_number: number;
@@ -46,6 +49,7 @@ export const MotionPreview: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const llmFailed = locationState?.llmFailed === true;
   const hasLLMContent = drafts.some((draft) => !!draft.llm_output);
@@ -92,20 +96,14 @@ export const MotionPreview: React.FC = () => {
       setPdfError(null);
 
       const pdfBuffer = await documentAPI.generatePDFSync(motionId!);
-      const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-
       const filename = `${motion?.motion_type || 'motion'}-${motion?.case_number || 'draft'}.pdf`;
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      downloadBlob(pdfBuffer, 'application/pdf', filename);
       setPdfDownloaded(true);
     } catch (error) {
+      if (isPaywallError(error)) {
+        setShowPaywall(true);
+        return;
+      }
       console.error('Failed to generate PDF:', error);
       setPdfError(
         'PDF generation failed. Your draft is saved on our servers — try again or come back later.'
@@ -290,6 +288,12 @@ export const MotionPreview: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <PaywallModal
+          isOpen={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          returnTo={`/motion/${motionId}/preview`}
+        />
       </div>
     </div>
   );

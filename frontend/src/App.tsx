@@ -21,6 +21,8 @@ import { GmailCallback } from './components/evidence/GmailCallback';
 import { PrivacyPolicy } from './components/legal/PrivacyPolicy';
 import { Terms } from './components/legal/Terms';
 import { LegalFooter } from './components/legal/LegalFooter';
+import { BillingSuccess } from './components/billing/BillingSuccess';
+import { BillingCanceled } from './components/billing/BillingCanceled';
 
 function App() {
   return (
@@ -169,6 +171,24 @@ function App() {
             element={
               <PrivateRoute>
                 <GmailCallback />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Stripe checkout return routes */}
+          <Route
+            path="/billing/success"
+            element={
+              <PrivateRoute>
+                <BillingSuccess />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/billing/canceled"
+            element={
+              <PrivateRoute>
+                <BillingCanceled />
               </PrivateRoute>
             }
           />

@@ -14,11 +14,12 @@ from app.models.motion import Motion, MotionDraft
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
+from app.core.entitlements import require_active_subscription
 from app.services import semantic_check_service
 from app.services.fact_gate import GateContext, merge_intake_values, run_fact_gate
 from app.services.llm_service import llm_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_active_subscription)])
 logger = logging.getLogger(__name__)
 
 class RewriteRequest(BaseModel):

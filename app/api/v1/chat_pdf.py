@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.core.deps import get_db, get_current_user
+from app.core.entitlements import require_active_subscription
 from app.models.user import User
 from app.services.chat_to_pdf_service import chat_to_pdf_service
 
@@ -57,7 +58,7 @@ async def prepare_motion_from_chat(
             detail=f"Error preparing motion: {str(e)}"
         )
 
-@router.post("/generate-pdf")
+@router.post("/generate-pdf", dependencies=[Depends(require_active_subscription)])
 async def generate_pdf_from_motion(
     request: GeneratePDFRequest,
     db: AsyncSession = Depends(get_db),
@@ -150,7 +151,7 @@ async def get_confirmation_summary(
             detail=f"Error creating summary: {str(e)}"
         )
 
-@router.post("/complete-workflow")
+@router.post("/complete-workflow", dependencies=[Depends(require_active_subscription)])
 async def complete_chat_to_pdf_workflow(
     request: PrepareMotionRequest,
     db: AsyncSession = Depends(get_db),

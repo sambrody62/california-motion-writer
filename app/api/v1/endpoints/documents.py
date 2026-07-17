@@ -28,6 +28,7 @@ from app.models.motion import Motion, MotionDraft, Document
 from app.models.profile import Profile
 from app.api.v1.endpoints.auth import get_current_user
 from app.core.database import get_db
+from app.core.entitlements import require_active_subscription
 from app.core.config import settings
 from app.services.pdf_packet_service import generate_packet, primary_form_for
 
@@ -124,7 +125,11 @@ class PDFGenerationResponse(BaseModel):
     status: str
     download_url: Optional[str] = None
 
-@router.post("/generate-pdf", response_model=PDFGenerationResponse)
+@router.post(
+    "/generate-pdf",
+    response_model=PDFGenerationResponse,
+    dependencies=[Depends(require_active_subscription)],
+)
 async def generate_pdf(
     request: GeneratePDFRequest,
     background_tasks: BackgroundTasks,
@@ -228,7 +233,7 @@ async def generate_pdf_background(
     except Exception as e:
         logger.error(f"Error publishing to Pub/Sub: {str(e)}")
 
-@router.post("/generate-pdf-sync")
+@router.post("/generate-pdf-sync", dependencies=[Depends(require_active_subscription)])
 async def generate_pdf_sync(
     request: GeneratePDFRequest,
     current_user: User = Depends(get_current_user),
@@ -293,7 +298,7 @@ async def generate_pdf_sync(
             detail=f"Error generating PDF: {str(e)}"
         )
 
-@router.get("/{document_id}/download")
+@router.get("/{document_id}/download", dependencies=[Depends(require_active_subscription)])
 async def download_document(
     document_id: str,
     current_user: User = Depends(get_current_user),

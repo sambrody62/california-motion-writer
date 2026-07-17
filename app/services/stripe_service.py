@@ -35,7 +35,7 @@ def _sanitize_return_to(return_to: Optional[str]) -> str:
     return "/dashboard"
 
 
-async def _get_by_user(db: AsyncSession, user_id) -> Optional[Subscription]:
+async def get_subscription_for_user(db: AsyncSession, user_id) -> Optional[Subscription]:
     result = await db.execute(select(Subscription).where(Subscription.user_id == user_id))
     return result.scalar_one_or_none()
 
@@ -50,7 +50,7 @@ async def _get_by_customer(db: AsyncSession, customer_id) -> Optional[Subscripti
 
 
 async def get_or_create_customer(db: AsyncSession, user: User) -> Subscription:
-    row = await _get_by_user(db, user.id)
+    row = await get_subscription_for_user(db, user.id)
     if row:
         return row
     _stripe_ready()
@@ -91,7 +91,7 @@ async def create_checkout_session(
 
 
 async def create_portal_session(db: AsyncSession, user: User) -> str:
-    row = await _get_by_user(db, user.id)
+    row = await get_subscription_for_user(db, user.id)
     if row is None:
         raise HTTPException(
             status_code=404,
@@ -144,7 +144,7 @@ async def sync_from_checkout_session(db: AsyncSession, user: User, session_id: s
             status_code=403,
             detail={"code": "session_ownership_mismatch", "message": "Not your checkout session."},
         )
-    row = await _get_by_user(db, user.id)
+    row = await get_subscription_for_user(db, user.id)
     if row is None:
         row = Subscription(user_id=user.id, stripe_customer_id=session.get("customer") or "")
         db.add(row)

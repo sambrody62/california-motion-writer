@@ -102,6 +102,34 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     await engine.dispose()
 
 @pytest_asyncio.fixture
+async def client_with_db():
+    """Client plus a session maker into the same in-memory DB, for tests that
+    must insert rows (e.g. subscriptions) for API-registered users."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        echo=False,
+        future=True
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_maker = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+
+    async def override_get_db():
+        async with session_maker() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac, session_maker
+    app.dependency_overrides.clear()
+    await engine.dispose()
+
+@pytest_asyncio.fixture
 async def test_user(test_db: AsyncSession) -> User:
     """Create a test user."""
     user = User(

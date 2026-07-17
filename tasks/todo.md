@@ -5,21 +5,38 @@ Decisions: $300 recurring every 3/6 months (interval set in Stripe dashboard via
 paywall gates LLM drafting + PDF export (intake/gameplan/evidence free); hosted Checkout + customer
 portal; 60-day money-back guarantee in offer copy (refunds manual via dashboard); guided-session
 booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billing.
-- [ ] S1 chore(billing): stripe~=15.3 dep, BILLING_ENABLED=false in conftest, this checklist
-- [ ] S2 feat(billing): Subscription model (app/models/subscription.py) + registrations
-- [ ] S3 feat(billing): config settings (STRIPE_* keys, FRONTEND_URL)
-- [ ] S4 feat(billing): 402 gate (app/core/entitlements.py) on llm.py router, documents.py
-      generate-pdf/-sync + /download, chat_pdf.py generate-pdf + complete-workflow
-- [ ] S5 feat(billing): stripe_service.py — customer/checkout/portal/verify + idempotent
-      webhook event application (last_event_created guard)
-- [ ] S6 feat(billing): billing endpoints (checkout-session, portal-session, status, verify-session)
-- [ ] S7 feat(billing): POST /webhooks/stripe with signature verification (unauthenticated)
-- [ ] S8 feat(billing): frontend billing.ts service + isPaywallError
-- [ ] S9 feat(billing): PaywallModal (offer copy incl. 60-day guarantee + session)
-- [ ] S10 feat(billing): GuidedIntake 402 → paywall modal, stop navigation
-- [ ] S11 feat(billing): MotionPreview PDF 402 → paywall modal
-- [ ] S12 feat(billing): BillingSuccess (verify + poll) / BillingCanceled / BillingButton +
-      routes + Dashboard entry; manual Stripe test-mode E2E
+- [x] S1 chore(billing): stripe~=15.3 dep, BILLING_ENABLED=false in conftest (24ac5f7)
+- [x] S2 feat(billing): Subscription model + registrations (f0725c4)
+- [x] S3 feat(billing): config settings STRIPE_* keys, FRONTEND_URL (991e354)
+- [x] S4 feat(billing): 402 gate on llm.py router, documents generate-pdf/-sync + /download,
+      chat_pdf generate-pdf + complete-workflow (d774c0b)
+- [x] S5 feat(billing): stripe_service.py — idempotent webhook application, last_event_created
+      guard, item-level current_period_end fallback for new Stripe API (e85934b)
+- [x] S6 feat(billing): checkout/portal/status/verify endpoints + 10/hr checkout limit (2567939)
+- [x] S7 feat(billing): POST /webhooks/stripe, real-HMAC signature tests. Gotcha: stripe v15
+      StripeObject is not a dict — endpoint passes json.loads(payload) to apply (1f86968)
+- [x] S8 feat(billing): billing.ts + isPaywallError (6030a8c)
+- [x] S9 feat(billing): PaywallModal — $300, 60-day guarantee, 1-on-1 session copy (d417fce)
+- [x] S10 feat(billing): GuidedIntake 402 → modal, returnTo /motion/{id}/edit/{lastStep};
+      extracted intakeNavigation.ts to stay ≤300 (c69ae5b)
+- [x] S11 feat(billing): MotionPreview 402 → modal; extracted utils/downloadBlob.ts (d15a007)
+- [x] S12 feat(billing): BillingSuccess (verify-session + 5×2s status poll + scheduling link),
+      BillingCanceled, BillingButton, /billing/* routes, Dashboard entry (e85169e)
+- [ ] S13 Manual Stripe test-mode E2E — BLOCKED on owner: create test-mode Product/Price
+      ($300 per 3 or 6 months) → STRIPE_PRICE_ID; sk_test key → STRIPE_SECRET_KEY;
+      `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe` → STRIPE_WEBHOOK_SECRET;
+      set BILLING_ENABLED=true; save default portal config; dunning = cancel after retries fail.
+      Verifies live: #-fragment success_url + {CHECKOUT_SESSION_ID} substitution.
+      NOTE: user pasted a pk_live (publishable) key in chat — not usable server-side and
+      live-mode; need sk_test via env, never in chat/repo.
+
+### Review (2026-07-17)
+Backend 589 passed / 3 xfailed; frontend 43 suites / 280 passed; prod build compiles
+(pre-existing exhaustive-deps warnings only). Gate default: BILLING_ENABLED unset → billing ON
+in prod code path (`getenv("BILLING_ENABLED", "true")`) but conftest forces false for tests —
+deploy must set STRIPE_* secrets or gated endpoints 402 with no way to pay (checkout 503s until
+configured). Entitled statuses: active/trialing/past_due (past_due grace delegated to Stripe
+dunning). Refunds: manual in dashboard; cancel the sub there to revoke access via webhook.
 
 
 ## Model upgrade + LLM checker (2026-07-14, approved: Opus drafter + Opus checker, no Gemini)

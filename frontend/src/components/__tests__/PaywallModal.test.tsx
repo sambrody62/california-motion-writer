@@ -33,7 +33,8 @@ beforeEach(() => {
 test('renders offer copy when open', () => {
   render(<PaywallModal isOpen onClose={jest.fn()} returnTo="/dashboard" />);
 
-  expect(screen.getByText(/\$300/)).toBeInTheDocument();
+  expect(screen.getByText(/\$499/)).toBeInTheDocument();
+  expect(screen.getByText(/\$99\/month/i)).toBeInTheDocument();
   expect(screen.getByText(/60-day money-back guarantee/i)).toBeInTheDocument();
   expect(screen.getByText(/guided session/i)).toBeInTheDocument();
 });

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +28,7 @@ PERIOD_END = 1893456000  # 2030-01-01
 def stripe_key(monkeypatch):
     monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_key")
     monkeypatch.setattr(settings, "STRIPE_PRICE_ID", "price_test")
+    monkeypatch.setattr(settings, "STRIPE_SETUP_PRICE_ID", "price_setup")
 
 
 def _sub_object(status="active", customer="cus_1", sub_id="sub_1", cancel=False):
@@ -81,10 +83,25 @@ async def test_create_checkout_session_builds_urls(
     assert kwargs["mode"] == "subscription"
     assert kwargs["customer"] == "cus_1"
     assert kwargs["client_reference_id"] == str(test_user.id)
-    assert kwargs["line_items"] == [{"price": "price_test", "quantity": 1}]
+    # One-time $499 setup fee joins the first invoice; $99/mo price defines the subscription
+    assert kwargs["line_items"] == [
+        {"price": "price_setup", "quantity": 1},
+        {"price": "price_test", "quantity": 1},
+    ]
     assert "#/billing/success?session_id={CHECKOUT_SESSION_ID}" in kwargs["success_url"]
     assert "return_to=/motion/1/preview" in kwargs["success_url"]
     assert kwargs["cancel_url"].endswith("#/billing/canceled")
+
+
+async def test_checkout_503_without_setup_price(
+    test_db: AsyncSession, test_user: User, stripe_key, monkeypatch
+):
+    # Missing setup price would silently sell $99/mo without the $499 — refuse instead
+    monkeypatch.setattr(settings, "STRIPE_SETUP_PRICE_ID", "")
+    await _make_row(test_db, test_user)
+    with pytest.raises(HTTPException) as exc_info:
+        await create_checkout_session(test_db, test_user, "/dashboard")
+    assert exc_info.value.status_code == 503
 
 
 @pytest.mark.parametrize("bad", ["//evil.com", "https://evil.com", "javascript:x"])

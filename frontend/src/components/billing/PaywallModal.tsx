@@ -31,9 +31,9 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({ isOpen, onClose, ret
         <h2 className="text-xl font-semibold text-gray-900">
           Unlock motion drafting &amp; PDF export
         </h2>
-        <p className="mt-2 text-3xl font-bold text-gray-900">$300</p>
+        <p className="mt-2 text-3xl font-bold text-gray-900">$499</p>
         <p className="text-sm text-gray-600">
-          Recurring plan — your exact billing period is shown at checkout.
+          One-time to get started, then $99/month while you need us.
         </p>
         <ul className="mt-4 space-y-2 text-sm text-gray-700">
           <li>✓ AI-drafted, court-ready motions and PDF export</li>

@@ -62,6 +62,7 @@ async def test_billing_requires_auth(client_with_db, method, path):
 async def test_checkout_session_returns_url(client_with_db, monkeypatch):
     monkeypatch.setattr(settings, "STRIPE_SECRET_KEY", "sk_test_key")
     monkeypatch.setattr(settings, "STRIPE_PRICE_ID", "price_test")
+    monkeypatch.setattr(settings, "STRIPE_SETUP_PRICE_ID", "price_setup")
     client, _ = client_with_db
     headers = await _register_and_login(client)
     with patch("app.services.stripe_service.stripe.Customer.create") as cus, \

@@ -1,7 +1,9 @@
 # Build Plan — Family Court Helper MVP (formerly California Motion Writer)
 
 ## Stripe subscription billing (2026-07-17, approved plan: ~/.claude/plans/buzzing-nibbling-emerson.md)
-Decisions: $300 recurring every 3/6 months (interval set in Stripe dashboard via STRIPE_PRICE_ID);
+Decisions: PRICING CHANGED 2026-07-17 (superseding the earlier $300/3-6mo choice): $499 one-time
+setup fee + $99/month recurring — checkout carries STRIPE_SETUP_PRICE_ID (one-time) alongside
+STRIPE_PRICE_ID ($99/mo); both required or checkout 503s;
 paywall gates LLM drafting + PDF export (intake/gameplan/evidence free); hosted Checkout + customer
 portal; 60-day money-back guarantee in offer copy (refunds manual via dashboard); guided-session
 booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billing.
@@ -22,8 +24,11 @@ booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billin
 - [x] S11 feat(billing): MotionPreview 402 → modal; extracted utils/downloadBlob.ts (d15a007)
 - [x] S12 feat(billing): BillingSuccess (verify-session + 5×2s status poll + scheduling link),
       BillingCanceled, BillingButton, /billing/* routes, Dashboard entry (e85169e)
-- [ ] S13 Manual Stripe test-mode E2E — BLOCKED on owner: create test-mode Product/Price
-      ($300 per 3 or 6 months) → STRIPE_PRICE_ID; sk_test key → STRIPE_SECRET_KEY;
+- [x] S14 feat(billing): pricing switched to $499 setup + $99/mo (owner decision via
+      AskUserQuestion; checkout line_items + STRIPE_SETUP_PRICE_ID + paywall copy)
+- [ ] S13 Manual Stripe test-mode E2E — BLOCKED on owner: in TEST mode create TWO prices
+      (product prod_Uu9MKcVs5lagnL if it was made in test mode): recurring $99/month →
+      STRIPE_PRICE_ID, one-time $499 → STRIPE_SETUP_PRICE_ID; sk_test key → STRIPE_SECRET_KEY;
       `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe` → STRIPE_WEBHOOK_SECRET;
       set BILLING_ENABLED=true; save default portal config; dunning = cancel after retries fail.
       Verifies live: #-fragment success_url + {CHECKOUT_SESSION_ID} substitution.

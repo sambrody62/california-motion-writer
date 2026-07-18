@@ -68,7 +68,7 @@ async def create_checkout_session(
     db: AsyncSession, user: User, return_to: Optional[str] = None
 ) -> str:
     _stripe_ready()
-    if not settings.STRIPE_PRICE_ID:
+    if not settings.STRIPE_PRICE_ID or not settings.STRIPE_SETUP_PRICE_ID:
         raise HTTPException(
             status_code=503,
             detail={"code": "billing_not_configured", "message": "Billing is not configured."},
@@ -80,7 +80,12 @@ async def create_checkout_session(
         mode="subscription",
         customer=row.stripe_customer_id,
         client_reference_id=str(user.id),
-        line_items=[{"price": settings.STRIPE_PRICE_ID, "quantity": 1}],
+        # One-time setup fee joins the first invoice; the recurring price
+        # defines the ongoing subscription
+        line_items=[
+            {"price": settings.STRIPE_SETUP_PRICE_ID, "quantity": 1},
+            {"price": settings.STRIPE_PRICE_ID, "quantity": 1},
+        ],
         success_url=(
             f"{settings.FRONTEND_URL}/#/billing/success"
             f"?session_id={{CHECKOUT_SESSION_ID}}&return_to={path}"

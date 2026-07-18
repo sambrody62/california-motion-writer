@@ -51,7 +51,8 @@ class Settings(BaseSettings):
     # Stripe billing
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    STRIPE_PRICE_ID: str = os.getenv("STRIPE_PRICE_ID", "")
+    STRIPE_PRICE_ID: str = os.getenv("STRIPE_PRICE_ID", "")  # $99/mo recurring
+    STRIPE_SETUP_PRICE_ID: str = os.getenv("STRIPE_SETUP_PRICE_ID", "")  # $499 one-time
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Pub/Sub

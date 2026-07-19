@@ -26,14 +26,19 @@ booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billin
       BillingCanceled, BillingButton, /billing/* routes, Dashboard entry (e85169e)
 - [x] S14 feat(billing): pricing switched to $499 setup + $99/mo (owner decision via
       AskUserQuestion; checkout line_items + STRIPE_SETUP_PRICE_ID + paywall copy)
-- [ ] S13 Manual Stripe test-mode E2E — BLOCKED on owner: in TEST mode create TWO prices
-      (product prod_Uu9MKcVs5lagnL if it was made in test mode): recurring $99/month →
-      STRIPE_PRICE_ID, one-time $499 → STRIPE_SETUP_PRICE_ID; sk_test key → STRIPE_SECRET_KEY;
-      `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe` → STRIPE_WEBHOOK_SECRET;
-      set BILLING_ENABLED=true; save default portal config; dunning = cancel after retries fail.
-      Verifies live: #-fragment success_url + {CHECKOUT_SESSION_ID} substitution.
-      NOTE: user pasted a pk_live (publishable) key in chat — not usable server-side and
-      live-mode; need sk_test via env, never in chat/repo.
+- [x] S13 Stripe test-mode E2E PASSED 2026-07-18: 402 pre-pay → checkout session ($499+$99
+      line items, correct #-fragment success_url) → test-card payment ($598.00 first invoice,
+      paid) → webhook unlock in ~1s (status active, period end +1mo) → drafting 200 → portal
+      URL ok → API cancel → webhook re-lock in ~1s → 402. Rig: backend uvicorn :8001 (:8000
+      is another project's Docker), stripe listen via docker stripe/stripe-cli (CLI install
+      via brew blocked by outdated Xcode CLT). Owner's product/prices were made in LIVE mode;
+      test-mode copies created via API (prod_UuYYaljrKDs4xh). LIVE ids preserved in .env
+      comments: $499 price_1TuL3yDMovrH2tcZ9Nz49B2o, $99/mo price_1TuPTCDMovrH2tcZvfgY5r6J.
+- [ ] S15 Go-live checklist (deploy-time): swap sk_live + LIVE price ids into Secret Manager;
+      register https://<prod-domain>/api/v1/webhooks/stripe in the LIVE dashboard → whsec into
+      Secret Manager; save LIVE customer-portal default config; set LIVE dunning to cancel
+      subscription after failed retries; set FRONTEND_URL to prod URL. Optional: browser
+      click-through of checkout (visual confirmation of redirect substitution).
 
 ### Review (2026-07-17)
 Backend 589 passed / 3 xfailed; frontend 43 suites / 280 passed; prod build compiles

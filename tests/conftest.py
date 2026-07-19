@@ -16,6 +16,8 @@ os.environ["USE_MOCK_LLM"] = "true"
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing"
 # Off by default: the shared-IP auth fixture would trip auth limits mid-suite
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Off by default: billing gate would 402 the existing LLM/PDF tests
+os.environ["BILLING_ENABLED"] = "false"
 
 # Add app to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,6 +31,7 @@ from app.models.profile import Profile
 from app.models.motion import Motion
 from app.models.chat import ChatSession, ChatMessage
 from app.models.evidence import Evidence
+from app.models.subscription import Subscription
 
 from app.api.v1.endpoints.auth import get_password_hash
 
@@ -95,6 +98,34 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     # Clean up
+    app.dependency_overrides.clear()
+    await engine.dispose()
+
+@pytest_asyncio.fixture
+async def client_with_db():
+    """Client plus a session maker into the same in-memory DB, for tests that
+    must insert rows (e.g. subscriptions) for API-registered users."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        echo=False,
+        future=True
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_maker = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+
+    async def override_get_db():
+        async with session_maker() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac, session_maker
     app.dependency_overrides.clear()
     await engine.dispose()
 

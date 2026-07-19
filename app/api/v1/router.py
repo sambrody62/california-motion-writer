@@ -2,7 +2,7 @@
 Main API router
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, users, profiles, motions, llm, documents, intake, violations, evidence, evidence_batch, evidence_gmail, served_motion
+from app.api.v1.endpoints import auth, users, profiles, motions, llm, documents, intake, violations, evidence, evidence_batch, evidence_gmail, served_motion, billing, stripe_webhook
 from app.api.v1 import chat, chat_pdf
 
 api_router = APIRouter()
@@ -16,6 +16,8 @@ api_router.include_router(intake.router, prefix="/intake", tags=["Intake"])
 api_router.include_router(llm.router, prefix="/llm", tags=["LLM"])
 api_router.include_router(served_motion.router, prefix="/llm", tags=["LLM"])
 api_router.include_router(documents.router, prefix="/documents", tags=["Documents"])
+api_router.include_router(billing.router, prefix="/billing", tags=["Billing"])
+api_router.include_router(stripe_webhook.router, prefix="/webhooks", tags=["Webhooks"])
 # violations and chat_pdf carry their own path prefixes; evidence and evidence_gmail
 # declare frontend-facing paths (/motions/..., /evidence/..., /gmail/...) directly.
 # Adding prefixes here doubled every path and broke the frontend contract.

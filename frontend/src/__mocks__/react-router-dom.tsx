@@ -9,3 +9,4 @@ export const Navigate = ({ to }: { to: string }) => <div>Navigate to {to}</div>;
 export const useNavigate = () => jest.fn();
 export const useLocation = () => ({ pathname: '/', search: '', hash: '', state: null });
 export const useParams = () => ({});
+export const useSearchParams = () => [new URLSearchParams(''), jest.fn()];

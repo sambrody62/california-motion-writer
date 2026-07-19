@@ -28,6 +28,7 @@ class User(Base):
     profile = relationship("Profile", back_populates="user", uselist=False)
     motions = relationship("Motion", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
+    subscription = relationship("Subscription", back_populates="user", uselist=False)
 
 class Profile(Base):
     __tablename__ = "profiles"

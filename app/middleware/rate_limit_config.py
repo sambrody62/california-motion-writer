@@ -27,6 +27,9 @@ RATE_LIMITS = {
     # Auth - brute-force and signup-abuse protection
     "/api/v1/auth/token": "20/hour",
     "/api/v1/auth/register": "10/hour",
+
+    # Billing - checkout sessions create Stripe objects
+    "/api/v1/billing/checkout-session": "10/hour",
 }
 
 # Token limits by operation type

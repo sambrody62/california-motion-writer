@@ -1,5 +1,54 @@
 # Build Plan — Family Court Helper MVP (formerly California Motion Writer)
 
+## Stripe subscription billing (2026-07-17, approved plan: ~/.claude/plans/buzzing-nibbling-emerson.md)
+Decisions: PRICING CHANGED 2026-07-17 (superseding the earlier $300/3-6mo choice): $499 one-time
+setup fee + $99/month recurring — checkout carries STRIPE_SETUP_PRICE_ID (one-time) alongside
+STRIPE_PRICE_ID ($99/mo); both required or checkout 503s;
+paywall gates LLM drafting + PDF export (intake/gameplan/evidence free); hosted Checkout + customer
+portal; 60-day money-back guarantee in offer copy (refunds manual via dashboard); guided-session
+booking via external link (REACT_APP_SCHEDULING_URL). Branch: feat/stripe-billing.
+- [x] S1 chore(billing): stripe~=15.3 dep, BILLING_ENABLED=false in conftest (24ac5f7)
+- [x] S2 feat(billing): Subscription model + registrations (f0725c4)
+- [x] S3 feat(billing): config settings STRIPE_* keys, FRONTEND_URL (991e354)
+- [x] S4 feat(billing): 402 gate on llm.py router, documents generate-pdf/-sync + /download,
+      chat_pdf generate-pdf + complete-workflow (d774c0b)
+- [x] S5 feat(billing): stripe_service.py — idempotent webhook application, last_event_created
+      guard, item-level current_period_end fallback for new Stripe API (e85934b)
+- [x] S6 feat(billing): checkout/portal/status/verify endpoints + 10/hr checkout limit (2567939)
+- [x] S7 feat(billing): POST /webhooks/stripe, real-HMAC signature tests. Gotcha: stripe v15
+      StripeObject is not a dict — endpoint passes json.loads(payload) to apply (1f86968)
+- [x] S8 feat(billing): billing.ts + isPaywallError (6030a8c)
+- [x] S9 feat(billing): PaywallModal — $300, 60-day guarantee, 1-on-1 session copy (d417fce)
+- [x] S10 feat(billing): GuidedIntake 402 → modal, returnTo /motion/{id}/edit/{lastStep};
+      extracted intakeNavigation.ts to stay ≤300 (c69ae5b)
+- [x] S11 feat(billing): MotionPreview 402 → modal; extracted utils/downloadBlob.ts (d15a007)
+- [x] S12 feat(billing): BillingSuccess (verify-session + 5×2s status poll + scheduling link),
+      BillingCanceled, BillingButton, /billing/* routes, Dashboard entry (e85169e)
+- [x] S14 feat(billing): pricing switched to $499 setup + $99/mo (owner decision via
+      AskUserQuestion; checkout line_items + STRIPE_SETUP_PRICE_ID + paywall copy)
+- [x] S13 Stripe test-mode E2E PASSED 2026-07-18: 402 pre-pay → checkout session ($499+$99
+      line items, correct #-fragment success_url) → test-card payment ($598.00 first invoice,
+      paid) → webhook unlock in ~1s (status active, period end +1mo) → drafting 200 → portal
+      URL ok → API cancel → webhook re-lock in ~1s → 402. Rig: backend uvicorn :8001 (:8000
+      is another project's Docker), stripe listen via docker stripe/stripe-cli (CLI install
+      via brew blocked by outdated Xcode CLT). Owner's product/prices were made in LIVE mode;
+      test-mode copies created via API (prod_UuYYaljrKDs4xh). LIVE ids preserved in .env
+      comments: $499 price_1TuL3yDMovrH2tcZ9Nz49B2o, $99/mo price_1TuPTCDMovrH2tcZvfgY5r6J.
+- [ ] S15 Go-live checklist (deploy-time): swap sk_live + LIVE price ids into Secret Manager;
+      register https://<prod-domain>/api/v1/webhooks/stripe in the LIVE dashboard → whsec into
+      Secret Manager; save LIVE customer-portal default config; set LIVE dunning to cancel
+      subscription after failed retries; set FRONTEND_URL to prod URL. Optional: browser
+      click-through of checkout (visual confirmation of redirect substitution).
+
+### Review (2026-07-17)
+Backend 589 passed / 3 xfailed; frontend 43 suites / 280 passed; prod build compiles
+(pre-existing exhaustive-deps warnings only). Gate default: BILLING_ENABLED unset → billing ON
+in prod code path (`getenv("BILLING_ENABLED", "true")`) but conftest forces false for tests —
+deploy must set STRIPE_* secrets or gated endpoints 402 with no way to pay (checkout 503s until
+configured). Entitled statuses: active/trialing/past_due (past_due grace delegated to Stripe
+dunning). Refunds: manual in dashboard; cancel the sub there to revoke access via webhook.
+
+
 ## Model upgrade + LLM checker (2026-07-14, approved: Opus drafter + Opus checker, no Gemini)
 - [x] U1 feat(llm): drafting tier Sonnet 4.6 → Opus 4.8 (1ff81b6) — live-verified, drafts
       carry claude-opus-4-8, ~54s per motion (comparable to Sonnet)

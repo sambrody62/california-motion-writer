@@ -43,6 +43,49 @@ describe('FilingChecklist', () => {
       expect(screen.getByText(/16 court days before the hearing/i)).toBeInTheDocument();
       expect(screen.getByText(/5 calendar days if serving by mail/i)).toBeInTheDocument();
     });
+
+    test('lists additional family law courthouse divisions', () => {
+      render(<FilingChecklist county="San Diego" motionType="RFO" />);
+
+      expect(screen.getByText(/Other family law locations in this county/i)).toBeInTheDocument();
+      expect(screen.getByText(/East County Division/i)).toBeInTheDocument();
+      expect(screen.getByText(/North County Division/i)).toBeInTheDocument();
+      expect(screen.getByText(/South County Division/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Local Rules & Resources', () => {
+    test('renders local rules section with court website link', () => {
+      render(<FilingChecklist county="San Diego" motionType="RFO" />);
+
+      expect(screen.getByRole('heading', { name: /Local Rules & Resources/i })).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: /San Diego County court website/i });
+      expect(link).toHaveAttribute('href', 'https://www.sdcourt.ca.gov');
+      expect(link).toHaveAttribute('target', '_blank');
+    });
+
+    test('mentions local rules and e-filing guidance', () => {
+      render(<FilingChecklist county="San Diego" motionType="RFO" />);
+
+      expect(screen.getByText(/Local Rules section for family law requirements/i)).toBeInTheDocument();
+      expect(screen.getByText(/E-filing may be available or required/i)).toBeInTheDocument();
+    });
+
+    test('shows unverified disclaimer for counties not yet verified', () => {
+      render(<FilingChecklist county="San Diego" motionType="RFO" />);
+
+      expect(
+        screen.getByText(/not been verified against the court's current local\s+rules/i)
+      ).toBeInTheDocument();
+    });
+
+    test('includes a local rules review step in the checklist', () => {
+      render(<FilingChecklist county="San Diego" motionType="RFO" />);
+
+      expect(
+        screen.getByText(/Review the San Diego County local rules for family law/i)
+      ).toBeInTheDocument();
+    });
   });
 
   describe('Los Angeles County', () => {
@@ -98,6 +141,14 @@ describe('FilingChecklist', () => {
       const link = screen.getByRole('link', { name: /California Court self-help center/i });
       expect(link).toHaveAttribute('href', 'https://selfhelp.courts.ca.gov');
       expect(link).toHaveAttribute('target', '_blank');
+    });
+
+    test('includes a local rules review step in the generic checklist', () => {
+      render(<FilingChecklist county="Unknown County" motionType="RFO" />);
+
+      expect(
+        screen.getByText(/Review your county's local rules for family law/i)
+      ).toBeInTheDocument();
     });
   });
 

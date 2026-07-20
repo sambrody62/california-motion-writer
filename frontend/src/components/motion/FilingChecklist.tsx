@@ -122,6 +122,19 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
               File proof of service (Form FL-335) with the court
             </label>
           </div>
+
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              id="generic-local-rules"
+              className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+              checked={checkedItems.has(6)}
+              onChange={() => toggleItem(6)}
+            />
+            <label htmlFor="generic-local-rules" className="ml-3 text-sm text-gray-700 cursor-pointer">
+              Review your county's local rules for family law — local rules may require additional local forms, cover sheets, or specific hearing scheduling steps
+            </label>
+          </div>
         </div>
       </div>
     );
@@ -138,6 +151,44 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
         <h3 className="text-sm font-semibold text-gray-900 mb-2">Courthouse Information</h3>
         <p className="text-sm font-medium text-gray-900">{countyInfo!.courthouse.name}</p>
         <p className="text-sm text-gray-600 mt-1">{countyInfo!.courthouse.address}</p>
+        {countyInfo!.additionalCourthouses && countyInfo!.additionalCourthouses.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-gray-700 mb-1">Other family law locations in this county:</p>
+            <ul className="space-y-1">
+              {countyInfo!.additionalCourthouses.map((court) => (
+                <li key={court.name} className="text-xs text-gray-600">
+                  {court.name} — {court.address}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-gray-500 mt-1">
+              Confirm which courthouse serves your case before filing.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Local Rules & Resources */}
+      <div className="mb-6 p-4 bg-amber-50 rounded border border-amber-200">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Local Rules &amp; Resources</h3>
+        <p className="text-sm text-gray-700 mb-2">{countyInfo!.localRules.note}</p>
+        <p className="text-sm text-gray-700 mb-2">{countyInfo!.eFiling.note}</p>
+        <p className="text-sm">
+          <a
+            href={countyInfo!.localRules.url || countyInfo!.courtWebsite}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-primary-700 hover:text-primary-900 underline"
+          >
+            {county} County court website
+          </a>
+        </p>
+        {!countyInfo!.verification.verified && (
+          <p className="text-xs text-amber-700 mt-2">
+            County details shown here have not been verified against the court's current local
+            rules. Always confirm requirements with the court before filing.
+          </p>
+        )}
       </div>
 
       {/* Filing Requirements */}
@@ -241,6 +292,19 @@ export const FilingChecklist: React.FC<FilingChecklistProps> = ({ county, motion
           />
           <label htmlFor="check-proof" className="ml-3 text-sm text-gray-700 cursor-pointer">
             File proof of service (Form FL-335) with the court within 5 days of filing
+          </label>
+        </div>
+
+        <div className="flex items-start">
+          <input
+            type="checkbox"
+            id="check-local-rules"
+            className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+            checked={checkedItems.has(6)}
+            onChange={() => toggleItem(6)}
+          />
+          <label htmlFor="check-local-rules" className="ml-3 text-sm text-gray-700 cursor-pointer">
+            Review the {county} County local rules for family law (see Local Rules &amp; Resources above)
           </label>
         </div>
       </div>
